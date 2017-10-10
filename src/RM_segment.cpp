@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
                         "complete_sub", "complete_super",
                         "CC", "CD", "DT", "IN", "ADJ", "NP",
                         "PP", "ADV", "VB", "WH", "NA",
-                        };;
+                        };
     vector<vector<double>> featuresPhrase = Dump::loadFeatures("tmp_remine/phrase.feat", featureNamesPhrase);
     // vector<vector<double>> featuresPhrase = Features::extract(featureNamesPhrase);
 

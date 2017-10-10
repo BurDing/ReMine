@@ -51,6 +51,7 @@ void loadSegmentationModel(const string& filename)
 
     Binary::read(in, cnt);
     FrequentPatternMining::id2ends.resize(cnt);
+    Binary::read(in, cnt);
     cerr << "pattern2id " << cnt <<endl;
     for (int i = 0; i < cnt; ++i) {
         size_t key;
@@ -128,6 +129,10 @@ void dumpSegmentationModel(const string& filename)
     // Binary::write(out, Documents::totalWordTokens);
 
     // Pattern Id To Tag
+
+    cerr << "# frequent pattern" << id2ends.size() << endl;
+    Binary::write(out, FrequentPatternMining::id2ends.size());
+
     cerr << "# pattern2id" << pattern2id.size() << endl;
     Binary::write(out, pattern2id.size());
     for (const auto& kv : pattern2id) {

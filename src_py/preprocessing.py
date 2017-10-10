@@ -1,6 +1,6 @@
 import sys
 import argparse, _pickle
-import nltk
+import nltk,json
 
 class PreProcessor(object):
 	"""docstring for PreProcessor"""
@@ -82,7 +82,6 @@ class PreProcessor(object):
 						else:
 							fdoc.write(w+'\n')
 					_word.append(w)
-					
 					fcase.write(self.case(w))
 				self.test_tokens.append(_token)
 				self.test_words.append(_word)
@@ -92,6 +91,41 @@ class PreProcessor(object):
 		fdep.close()
 		fpos.close()
 		fdoc.close()
+		fcase.close()
+
+	def tokenized_train_rm(self, docIn):
+		fpos = open('tmp_remine/rm_pos_tags_train.txt', 'w')
+		fdoc = open('tmp_remine/rm_tokenized_train.txt', 'w')
+		fcase = open('tmp_remine/rm_case_tokenized_train.txt', 'w')
+		self.test_tokens = []
+		self.test_words = []
+		with open(docIn) as IN:
+			for line in IN:
+				_word = []
+				_token = []
+				tmp = json.loads(line)
+				tokens = tmp['tokens']
+				postags = tmp['pos']
+				for i,w in enumerate(tokens):
+					if i != len(tokens) - 1: 
+						fdoc.write(str(self.word_mapping[w])+' ')
+					else:
+						fdoc.write(str(self.word_mapping[w])+'\n')
+					_token.append(str(self.word_mapping[w]))
+					_word.append(w)
+					fcase.write(self.case(w))
+				self.test_tokens.append(_token)
+				self.test_words.append(_word)
+				fcase.write('\n')
+				fpos.write('\n'.join(postags) + '\n')
+		fpos.close()
+		fdoc.close()
+		fcase.close()
+
+
+	def dump_rm(self):
+		_pickle.dump(self.test_words, open('tmp_remine/rm_test_words.p', 'wb'))
+		_pickle.dump(self.test_tokens, open('tmp_remine/rm_test_tokens.p', 'wb'))
 
 	def dump(self):
 		with open('tmp_remine/tokenized_punctuations.txt','w') as OUT:
@@ -111,6 +145,11 @@ class PreProcessor(object):
 		self.word_mapping = _pickle.load(open('tmp_remine/token_mapping.p', 'rb'))
 		self.test_tokens = _pickle.load(open('tmp_remine/test_tokens.p', 'rb'))
 		self.test_words = _pickle.load(open('tmp_remine/test_words.p', 'rb'))
+
+	def load_rm_all(self):
+		self.word_mapping = _pickle.load(open('tmp_remine/token_mapping.p', 'rb'))
+		self.test_tokens = _pickle.load(open('tmp_remine/rm_test_tokens.p', 'rb'))
+		self.test_words = _pickle.load(open('tmp_remine/rm_test_words.p', 'rb'))
 
 	def tokenize(self, docIn, docOut):
 		with open(docIn) as doc, open(docOut,'w') as out:
@@ -241,6 +280,10 @@ if __name__ == '__main__':
 	elif args.op == 'segment':
 		tmp.load_all()
 		tmp.mapBackv2(args.in1, args.out)
-
-
-		
+	elif args.op == 'train_rm':
+		tmp.load()
+		tmp.tokenized_train_rm(args.in1)
+		tmp.dump_rm()
+	elif args.op == 'segment_rm':
+		tmp.load_rm_all()
+		tmp.mapBackv2(args.in1, args.out)

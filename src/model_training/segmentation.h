@@ -753,6 +753,8 @@ public:
             patterns[i].currentFreq = 0;
         }
 
+        cerr << id2ends.size() << endl;
+        cerr << patterns.size() << endl;
         # pragma omp parallel for schedule(dynamic, PATTERN_CHUNK_SIZE)
         for (PATTERN_ID_TYPE i = 0; i < id2ends.size(); ++ i) {
             id2ends[i].clear();
@@ -760,7 +762,7 @@ public:
 
         logDeps();
 
-        // cerr << "Begin rectify frequency deps" << endl;
+        cerr << "Begin rectify frequency deps" << endl;
         double energy = 0;
         # pragma omp parallel for reduction(+:energy) schedule(dynamic, SENTENCE_CHUNK_SIZE)
         for (INDEX_TYPE senID = 0; senID < sentences.size(); ++ senID) {
@@ -773,6 +775,9 @@ public:
                 postags.push_back(Documents::posTags[i]);
                 deps.push_back(Documents::depPaths[i]);
             }
+            assert(tokens.size() == postags.size());
+            assert(tokens.size() == deps.size());
+
             vector<double> f;
             vector<int> pre;
 

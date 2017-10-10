@@ -12,21 +12,21 @@ typedef unsigned long long ULL;
 typedef int INDEX_TYPE; // sentence id
 typedef short int POSITION_INDEX_TYPE; // position inside a sentence
 
-const string RM_TRAIN_FILE = "tmp_remine/nyt_6k_rm/tokenized_train.txt";
-const string RM_TEST_FILE = "tmp_remine/nyt_6k_rm/tokenized_test.txt";
-const string RM_TRAIN_CAPITAL_FILE = "tmp_remine/nyt_6k_rm/case_tokenized_train.txt";
-const string RM_TRAIN_DEPS_FILE = "tmp_remine/nyt_6k_rm/deps_train.txt";
+const string RM_TRAIN_FILE = "tmp_remine/rm_tokenized_train.txt";
+const string RM_TEST_FILE = "tmp_remine/rm_tokenized_test.txt";
+const string RM_TRAIN_CAPITAL_FILE = "tmp_remine/rm_case_tokenized_train.txt";
+const string RM_TRAIN_DEPS_FILE = "tmp_remine/rm_deps_train.txt";
 // const string RM_TRAIN_DEPS_FILE = "remine_extraction/ver2/nyt_6k_deps_rm.txt";
-const string RM_STOPWORDS_FILE = "tmp_remine/nyt_6k_rm/tokenized_stopwords.txt";
-const string RM_PUNC_FILE = "tmp_remine/nyt_6k_rm/tokenized_punctuations.txt";
-const string RM_ALL_FILE = "tmp_remine/nyt_6k_rm/tokenized_quality.txt";
-const string RM_NEGATIVES_FILE = "tmp_remine/nyt_6k_rm/tokenized_negatives.txt";
-const string RM_QUALITY_FILE = "tmp_remine/nyt_6k_rm/tokenized_quality.txt";
-const string RM_POS_TAGS_FILE = "tmp_remine/nyt_6k_rm/pos_tags_tokenized_train.txt";
+const string RM_STOPWORDS_FILE = "tmp_remine/tokenized_stopwords.txt";
+const string RM_PUNC_FILE = "tmp_remine/tokenized_punctuations.txt";
+const string RM_ALL_FILE = "tmp_remine/tokenized_quality.txt";
+const string RM_NEGATIVES_FILE = "tmp_remine/tokenized_negatives.txt";
+const string RM_QUALITY_FILE = "tmp_remine/tokenized_quality.txt";
+const string RM_POS_TAGS_FILE = "tmp_remine/rm_pos_tags_train.txt";
 
-const string RM_TEXT_TO_SEG_FILE = "tmp_remine/nyt_6k_rm/tokenized_train.txt";
-const string RM_TEXT_TO_SEG_POS_TAGS_FILE = "tmp_remine/nyt_6k_rm/pos_tags_tokenized_train.txt";
-const string RM_TEXT_TO_SEG_DEPS_FILE = "tmp_remine/nyt_6k_rm/deps_train.txt";
+const string RM_TEXT_TO_SEG_FILE = "tmp_remine/rm_tokenized_train.txt";
+const string RM_TEXT_TO_SEG_POS_TAGS_FILE = "tmp_remine/rm_pos_tags_train.txt";
+const string RM_TEXT_TO_SEG_DEPS_FILE = "tmp_remine/rm_deps_train.txt";
 
 
 const string TRAIN_FILE = "tmp_remine/tokenized_train.txt";
@@ -52,14 +52,14 @@ const string TEXT_TO_SEG_DEPS_FILE = "tmp_remine/deps_train.txt";
 
 const TOKEN_ID_TYPE BREAK = -911;
 
-int ITERATIONS = 1;
+int ITERATIONS = 2;
 int MIN_SUP = 30;
 int MAX_LEN = 8;
 int MAX_POSITIVE = 100;
 int NEGATIVE_RATIO = 2;
 int NTHREADS = 4;
 int POSTAG_SCORE = 0;
-bool RELATION_MODE = false;
+bool RELATION_MODE = true;
 double SEGMENT_MULTI_WORD_QUALITY_THRESHOLD = 0.01;
 double SEGMENT_SINGLE_WORD_QUALITY_THRESHOLD = 0.01;
 bool ENABLE_POS_TAGGING = false;

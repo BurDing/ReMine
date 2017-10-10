@@ -196,8 +196,10 @@ namespace Documents
 
         INDEX_TYPE docs = 0;
         TOTAL_TOKENS_TYPE ptr = 0;
+
         while (getLine(in)) {
             ++ docs;
+
             // cerr << docs << endl;
             TOTAL_TOKENS_TYPE docStart = ptr;
 
@@ -292,6 +294,7 @@ namespace Documents
                 }
 
             }
+
             docEnds.insert(ptr - 1);
 
             set<TOKEN_ID_TYPE> docSet(wordTokens + docStart, wordTokens + ptr);
