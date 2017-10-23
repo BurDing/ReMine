@@ -1,4 +1,4 @@
-SEGMENTATION_MODEL=results_remine/segmentation.model
+SEGMENTATION_MODEL=results_remine/rm_segmentation.model
 #SEGMENTATION_MODEL=results_remine/segmentation.model
 TEXT_TO_SEG=tmp_remine/raw_text_to_seg.txt
 #TEXT_TO_SEG=data/remine/nyt_test.txt
@@ -31,14 +31,14 @@ POS_TAGS=tmp_remine/pos_tags_tokenized_text_to_seg.txt
 echo ${green}===Segphrasing===${reset}
 
 if [ $ENABLE_POS_TAGGING -eq 1 ]; then
-	time ./bin/remine_segment \
+	time ./bin/remine_rm_segment \
         --verbose \
         --pos_tag \
         --thread $THREAD \
         --model $SEGMENTATION_MODEL \
 		--highlight $HIGHLIGHT_TOP_K
 else
-	time ./bin/remine_segment \
+	time ./bin/remine_rm_segment \
         --verbose \
         --thread $THREAD \
         --model $SEGMENTATION_MODEL \

@@ -1,11 +1,7 @@
 SEGMENTATION_MODEL=results_remine/segmentation.model
-#SEGMENTATION_MODEL=results_remine/segmentation.model
 TEXT_TO_SEG=tmp_remine/raw_text_to_seg.txt
-#TEXT_TO_SEG=data/remine/nyt_test.txt
-#INTERMEDIATE=$(($1 + 0))
-HIGHLIGHT_TOP_K=100000
-#HIGHLIGHT_TOP_K=$(($INTERMEDIATE * 3000))
 ENABLE_POS_TAGGING=1
+MAX_POSITIVES=-1
 THREAD=10
 
 green=`tput setaf 2`
@@ -21,34 +17,29 @@ mkdir -p results_remine
 echo ${green}===Tokenization===${reset}
 
 TOKENIZER="-cp .:tools/tokenizer/lib/*:tools/tokenizer/resources/:tools/tokenizer/build/ Tokenizer"
-TOKENIZED_TEXT_TO_SEG=tmp_remine/tokenized_text_to_seg_100.txt
-CASE=tmp_remine/case_tokenized_text_to_seg_100.txt
-TOKEN_MAPPING=tmp_remine/token_mapping.txt
-POS_TAGS=tmp_remine/pos_tags_tokenized_text_to_seg.txt
 
 ### END Part-Of-Speech Tagging ###
 
 echo ${green}===Segphrasing===${reset}
 
 if [ $ENABLE_POS_TAGGING -eq 1 ]; then
-	time ./bin/remine_segment \
+	time ./bin/remine_rm_train \
         --verbose \
         --pos_tag \
         --thread $THREAD \
-        --model $SEGMENTATION_MODEL \
-		--highlight $HIGHLIGHT_TOP_K
+        --max_positives $MAX_POSITIVES \
+        --model $SEGMENTATION_MODEL
 else
-	time ./bin/remine_segment \
+	time ./bin/remine_rm_train \
         --verbose \
         --thread $THREAD \
-        --model $SEGMENTATION_MODEL \
-		--highlight $HIGHLIGHT_TOP_K
+        --max_positives $MAX_POSITIVES \
+        --model $SEGMENTATION_MODEL
 fi
 
 ### END Segphrasing ###
 
 #echo ${green}===Generating Output===${reset}
-#python src_py/PreProcessor.py segmentation tmp_remine/tokenized_segmented_sentences.txt results_remine/segmentation.txt
 #python src_py/PreProcessor.py segmentation tmp_remine/nyt_6k_rm/tokenized_segmented_sentences.txt results_remine/segmentation.txt
 #java $TOKENIZER -m segmentation -i $TEXT_TO_SEG -segmented tmp_remine/tokenized_segmented_sentences.txt -o results_remine/segmentation.txt -tokenized_raw tmp_remine/raw_text_to_seg.txt -tokenized_id tmp_remine/tokenized_text_to_seg.txt -c N
 

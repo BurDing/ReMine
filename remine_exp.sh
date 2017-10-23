@@ -1,10 +1,10 @@
 FIRST_RUN=1
 ENABLE_POS_TAGGING=1
-MIN_SUP=5
+MIN_SUP=10
 #echo $MIN_SUP
 #0 original SegPhrase, 1 in the loop, 2 at the top
-POSTAG_SCORE=1
-THREAD=10
+POSTAG_SCORE=0
+THREAD=20
 #THREAD=1
 LABEL_METHOD=DPDN
 MAX_POSITIVES=-1
@@ -56,8 +56,10 @@ TOKENIZER="-cp .:tools/tokenizer/lib/*:tools/tokenizer/resources/:tools/tokenize
 java $TOKENIZER -m translate -i tmp_remine/frequent_patterns.txt -o results_remine/frequent_patterns.txt -t $TOKEN_MAPPING -c N -thread $THREAD
 
 echo ${green}===Generating Output===${reset}
-java $TOKENIZER -m translate -i tmp_remine/final_quality_multi-phrases.txt -o results_remine/multigram_phrases.txt -t $TOKEN_MAPPING -c N -thread $THREAD
-java $TOKENIZER -m translate -i tmp_remine/final_quality_unigrams.txt -o results_remine/unigrams.txt -t $TOKEN_MAPPING -c N -thread $THREAD
+java $TOKENIZER -m translate -i tmp_remine/final_quality_multi-entities.txt -o results_remine/multigram_entities.txt -t $TOKEN_MAPPING -c N -thread $THREAD
+java $TOKENIZER -m translate -i tmp_remine/final_quality_multi-unigrams.txt -o results_remine/unigrams.txt -t $TOKEN_MAPPING -c N -thread $THREAD
+java $TOKENIZER -m translate -i tmp_remine/final_quality_multi-backgrounds.txt -o results_remine/multigram_backgrounds.txt -t $TOKEN_MAPPING -c N -thread $THREAD
+java $TOKENIZER -m translate -i tmp_remine/final_quality_multi-relations.txt -o results_remine/multigram_relations.txt -t $TOKEN_MAPPING -c N -thread $THREAD
 
 
 #java -jar $TOKENIZER -m translate -i tmp/frequent_patterns.txt -o tmp/human_frequent_patterns.txt -t $TOKEN_MAPPING -c N
