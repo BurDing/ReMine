@@ -108,7 +108,7 @@ void dumpSegmentationModel(const string& filename)
     size_t cnt = 0;
     for (int i = 0; i < patterns.size(); ++ i) {
         // if (patterns[i].size() > 1 || patterns[i].size() == 1 && patterns[i].currentFreq > 0 && unigrams[patterns[i].tokens[0]] >= MIN_SUP ) {
-            /*if (RELATION_MODE && patterns[i].indicator == "ENTITY" || !RELATION_MODE && patterns[i].indicator == "RELATION") {
+            /*if (RELATION_MODE && patterns[i].indicator == "entity" || !RELATION_MODE && patterns[i].indicator == "RELATION") {
                 continue;
             }*/
         ++ cnt;
@@ -316,12 +316,25 @@ void dumpResults(const string& prefix)
     for (int i = 0; i < patterns.size(); ++ i) {
         //now different from view of dumped model or running model
         //if (patterns[i].size() == 1 && patterns[i].currentFreq > 0 && unigrams[patterns[i].tokens[0]] >= MIN_SUP) {
-        if (patterns[i].size() == 1 && patterns[i].currentFreq > 0) {
+        if (patterns[i].size() > 1 && patterns[i].currentFreq > 0 && patterns[i].indicator[0] == 'B') {
+        // if (patterns[i].size() == 1 && patterns[i].currentFreq > 0) {
             order.push_back(make_pair(patterns[i].quality, i));
         }
     }
     //cerr<<"here"<<endl;
-    dumpRankingList(prefix + "_unigrams.txt", order);
+    dumpRankingList(prefix + "_multi-backgrounds.txt", order);
+
+    order.clear();
+    for (int i = 0; i < patterns.size(); ++ i) {
+        //now different from view of dumped model or running model
+        if (patterns[i].size() == 1 && patterns[i].currentFreq > 0 && unigrams[patterns[i].tokens[0]] >= MIN_SUP) {
+        // if (patterns[i].size() > 1 && patterns[i].currentFreq > 0 && patterns[i].indicator[0] == 'B') {
+        // if (patterns[i].size() == 1 && patterns[i].currentFreq > 0) {
+            order.push_back(make_pair(patterns[i].quality, i));
+        }
+    }
+    //cerr<<"here"<<endl;
+    dumpRankingList(prefix + "_multi-unigrams.txt", order);
 
     order.clear();
     for (int i = 0; i < patterns.size(); ++ i) {

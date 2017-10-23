@@ -72,7 +72,7 @@ namespace Documents
 
     unordered_set<TOKEN_ID_TYPE> docEnds;
 
-    set<string> separatePunc = {",", ".", "\"", ";", "!", ":", "(", ")", "?", "``","$","''", "-lrb-", "-rrb-", "-", "'"};
+    set<string> separatePunc = {",", ".", "\"", ";", "!", ":", "(", ")", "?", "``","$","''", "-lrb-", "-rrb-", "-", "'", "--"};
 // ===
     inline bool hasDashAfter(int i) {
         return 0 <= i && i < totalWordTokens && wordTokenInfo[i].get(DASH_AFTER);
@@ -127,6 +127,7 @@ namespace Documents
             }
         }
         fclose(in);
+        cerr << "#stopwords " << stopwords.size() << endl;
     }
 
     inline void loadPuncwords(const string &filename) {
@@ -196,7 +197,7 @@ namespace Documents
 
         INDEX_TYPE docs = 0;
         TOTAL_TOKENS_TYPE ptr = 0;
-
+        int err_lines = 0;
         while (getLine(in)) {
             ++ docs;
 
@@ -237,18 +238,21 @@ namespace Documents
 
                 // get capital info
                 int capitalInfo = line[capitalPtr ++];
-
+                
                 if (!flag || (punctuations.count(token) && ENABLE_POS_TAGGING)) {
                     string punc = flag ? punctuations[token] : temp;
+                    if (!separatePunc.count(punc)) {
+                        cerr << "Exceptions: " << punc << endl;
+                    }
                     if (ptr > 0) {
                         if (punc == "-") {
                             wordTokenInfo[ptr - 1].turnOn(DASH_AFTER);
                         }
-                        if (punc == "\"" || punc == "\'\'") {
+                        if (punc == "\"" || punc == "\'\'" || lastPunc == "``") {
                             // cerr << "turn on" << endl;
                             wordTokenInfo[ptr - 1].turnOn(QUOTE_AFTER);
                         }
-                        if (punc == ")" && ptr > 0) {
+                        if (punc == "-rrb-" && ptr > 0) {
                             //cerr << "turn on ) " << endl;
                             wordTokenInfo[ptr - 1].turnOn(PARENTHESIS_AFTER);
                         }
@@ -256,7 +260,13 @@ namespace Documents
                             wordTokenInfo[ptr - 1].turnOn(SEPARATOR_AFTER);
                         }
                     }
-                    if (!flag) lastPunc = punc;
+                    /*
+                    if (!flag) {
+                        ++ err_lines;
+                        cerr << "this case happens" << endl;
+                        lastPunc = punc;
+                    }
+                    */
                 } 
 
                 if (flag) {
@@ -270,21 +280,23 @@ namespace Documents
                     }
                     posTags[ptr] = posTagId;
 
-                    if (lastPunc == "\"" || lastPunc == "\'\'") {
-                        wordTokenInfo[ptr].turnOn(QUOTE_BEFORE);
-                    } else if (lastPunc == "(") {
-                        wordTokenInfo[ptr].turnOn(PARENTHESIS_BEFORE);
-                        //cerr << "turn on ( " << endl;
-                    }
+                    if (!punctuations.count(token)) {
+                        if (lastPunc == "\"" || lastPunc == "\'\'" || lastPunc == "``") {
+                            wordTokenInfo[ptr].turnOn(QUOTE_BEFORE);
+                        } else if (lastPunc == "-lrb-") {
+                            wordTokenInfo[ptr].turnOn(PARENTHESIS_BEFORE);
+                            //cerr << "turn on ( " << endl;
+                        }
 
-                    if (!punctuations.count(token) && capitalInfo & 1) {
-                        wordTokenInfo[ptr].turnOn(FIRST_CAPITAL);
-                    }
-                    if (!punctuations.count(token) && capitalInfo >> 1 & 1) {
-                        wordTokenInfo[ptr].turnOn(ALL_CAPITAL);
-                    }
-                    if (!punctuations.count(token) && capitalInfo >> 2 & 1) {
-                        isDigital[token] = true;
+                        if (capitalInfo & 1) {
+                            wordTokenInfo[ptr].turnOn(FIRST_CAPITAL);
+                        }
+                        if (capitalInfo >> 1 & 1) {
+                            wordTokenInfo[ptr].turnOn(ALL_CAPITAL);
+                        }
+                        if (capitalInfo >> 2 & 1) {
+                            isDigital[token] = true;
+                        }
                     }
 
                     if (punctuations.count(token) && ENABLE_POS_TAGGING) {
@@ -303,7 +315,7 @@ namespace Documents
             }
         }
         fclose(in);
-
+        cerr << "xxxx Error Lines xxxx" << err_lines << endl;
         for (TOKEN_ID_TYPE i = 0; i <= maxTokenID; ++ i) {
             idf[i] = log(docs / idf[i] + EPS);
         }

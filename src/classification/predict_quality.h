@@ -12,17 +12,19 @@ using namespace RandomForestRelated;
 void predictQuality(vector<Pattern> &patterns, vector<vector<double>> &features, vector<string> &featureNames)
 {
     vector<vector<double>> trainX;
-    vector<double> trainY;
-    int cnt=0;
+    vector<int> trainY;
+    int num_class = -1;
+    int cnt = 0;
     for (int i = 0; i < patterns.size(); ++ i) {
         if (patterns[i].size() > 1 && patterns[i].label != FrequentPatternMining::UNKNOWN_LABEL) {
             ++ cnt;
             trainX.push_back(features[i]);
             trainY.push_back(patterns[i].label);
+            if (patterns[i].label > num_class) num_class = patterns[i].label;
         }
     }
-
-    cerr<<"labeled input "<<cnt<<endl;
+    ++ num_class;
+    cerr << "labeled input " << cnt << "\tnumber of classes " << num_class << endl;
 
     if (trainX.size() == 0) {
         fprintf(stderr, "[ERROR] no training data found!\n");
@@ -30,7 +32,7 @@ void predictQuality(vector<Pattern> &patterns, vector<vector<double>> &features,
     }
 
     initialize();
-    TASK_TYPE = REGRESSION;
+    TASK_TYPE = CLASSIFICATION;
     RandomForest *solver = new RandomForest();
     RANDOM_FEATURES = 4;
     RANDOM_POSITIONS = 4;
@@ -39,9 +41,7 @@ void predictQuality(vector<Pattern> &patterns, vector<vector<double>> &features,
 
     cerr << trainX.size() << trainY.size() << endl;
 
-    solver->train(trainX, trainY, 1000, 1, 100, featureNames);
-
-    cerr << "passed" << endl;
+    solver->train(trainX, trainY, 1000, 1, 100, num_class, featureNames);
 
     vector<pair<double, string>> order;
     for (int i = 0; i < featureImportance.size(); ++ i) {
@@ -56,14 +56,18 @@ void predictQuality(vector<Pattern> &patterns, vector<vector<double>> &features,
     for (int i = 0; i < features.size(); ++ i) {
         if (patterns[i].size() > 1) {
             //patterns[i].quality = LiblinearRelated::predict(features[i]);
-            patterns[i].quality = solver->estimate(features[i]) - 1;
-            patterns[i].indicator = "ENTITY";
-            if (patterns[i].quality < -0.2) {
-                // cerr << patterns[i].quality << endl;
-                patterns[i].indicator = "RELATION";
-                patterns[i].quality = - patterns[i].quality;
+            pair<int, double> prediction = solver->estimate(features[i]);
+            // cerr << prediction.first << "\t" << prediction.second << endl;
+            patterns[i].quality = prediction.second;
+            if (prediction.first == 0) {
+                patterns[i].indicator = "BP";
             }
-            patterns[i].quality = fabs(patterns[i].quality);
+            else if (prediction.first == 1) {
+                patterns[i].indicator = "EP";
+            }
+            else if (prediction.first == 2) {
+                patterns[i].indicator = "RP";
+            }
             /*
             if (RELATION_MODE && patterns[i].indicator == "ENTITY") {
                 patterns[i].quality = 0;
@@ -80,13 +84,16 @@ void predictQuality(vector<Pattern> &patterns, vector<vector<double>> &features,
 void predictQualityUnigram(vector<Pattern> &patterns, vector<vector<double>> &features, vector<string> &featureNames)
 {
     vector<vector<double>> trainX;
-    vector<double> trainY;
+    vector<int> trainY;
+    int num_class = -1;
     for (int i = 0; i < patterns.size(); ++ i) {
         if (patterns[i].size() == 1 && patterns[i].label != FrequentPatternMining::UNKNOWN_LABEL) {
             trainX.push_back(features[i]);
             trainY.push_back(patterns[i].label);
+            if (patterns[i].label > num_class) num_class = patterns[i].label;
         }
     }
+    ++ num_class;
 
     if (trainX.size() == 0) {
         fprintf(stderr, "[ERROR] no training data found!\n");
@@ -94,13 +101,13 @@ void predictQualityUnigram(vector<Pattern> &patterns, vector<vector<double>> &fe
     }
 
     initialize();
-    TASK_TYPE = REGRESSION;
+    TASK_TYPE = CLASSIFICATION;
     RandomForest *solver = new RandomForest();
     RANDOM_FEATURES = 4;
     RANDOM_POSITIONS = 4;
 
     fprintf(stderr, "[Unigram] Start Classifier Training...\n");
-    solver->train(trainX, trainY, 1000, 1, 100, featureNames);
+    solver->train(trainX, trainY, 1000, 1, 100, num_class, featureNames);
 
     vector<pair<double, string>> order;
     for (int i = 0; i < featureImportance.size(); ++ i) {
@@ -114,18 +121,23 @@ void predictQualityUnigram(vector<Pattern> &patterns, vector<vector<double>> &fe
     fprintf(stderr, "[Unigram] Start Quality Prediction\n");
     for (int i = 0; i < features.size(); ++ i) {
         if (patterns[i].size() == 1) {
-            patterns[i].quality = solver->estimate(features[i]) - 1;
-            //patterns[i].quality = fabs(solver->estimate(features[i]) - 1);
+            // patterns[i].quality = solver->estimate(features[i]) - 1;
+            // patterns[i].quality = fabs(solver->estimate(features[i]) - 1);
             
-            assert(patterns[i].postags.size() == 1);
-            if (entity_tag.count(Documents::posid2Tag[patterns[i].postags[0]]) &&
-                patterns[i].quality > 0) {
-                patterns[i].indicator = "ENTITY";
+            // assert(patterns[i].postags.size() == 1);
+            pair<int, double> prediction = solver->estimate(features[i]);
+            // if patterns[i].tokens[0]
+            // cerr << prediction.first << "\t" << prediction.second << endl;
+            patterns[i].quality = prediction.second;
+            if (prediction.first == 0) {
+                patterns[i].indicator = "BP";
             }
-            else {
-                patterns[i].indicator = "RELATION"; 
+            else if (prediction.first == 1) {
+                patterns[i].indicator = "EP";
             }
-            patterns[i].quality = fabs(patterns[i].quality);
+            else if (prediction.first == 2) {
+                patterns[i].indicator = "RP";
+            }
         }
     }
     fprintf(stderr, "[Unigram] Prediction done.\n");

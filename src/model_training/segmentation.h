@@ -314,33 +314,51 @@ public:
 
     static double GetPuncCost(const vector<TOKEN_ID_TYPE> &tokens, const vector<TOKEN_ID_TYPE> &tags, int start, int end) {
         
-        
+        /*
         if (Documents::punctuations.count(tokens[start])) {
             
-            // if  (Documents::punctuations[tokens[start]] != "(" && Documents::punctuations[tokens[start]] != "\'\'")
+            if  (Documents::punctuations[tokens[start]] != "-lrb-" && Documents::punctuations[tokens[start]] != "\'\'")
             //    return -INF;
-            if (!Documents::punctuations.count(tokens[end])) return -INF;
-            if (Documents::punctuations[tokens[end]] != ")" && Documents::punctuations[tokens[start]] != "''")
+            if (!Documents::punctuations.count(tokens[end])) return -100;
+            if (Documents::punctuations[tokens[end]] != "-rrb-" && Documents::punctuations[tokens[start]] != "''")
                 return -INF;
         }
 
         if (Documents::punctuations.count(tokens[end])) {
             
-            //ivif (Documents::punctuations[tokens[end]] == "\'\'" && Documents::punctuations[tokens[start]] != "\'\'")
+            //if (Documents::punctuations[tokens[end]] == "\'\'" && Documents::punctuations[tokens[start]] != "\'\'")
             //    return -INF;
             if (!Documents::punctuations.count(tokens[start])) return -INF;
             if (Documents::punctuations[tokens[start]] != "(" && Documents::punctuations[tokens[start]] != "''")
                 return -INF;
         }
+        */
+        map<string, string> puncMap {{"-lrb-", "-rrb-"}, {"``", "\'\'"}, {"\'\'", "\'\'"}, {"\"", "\""}};
+        if (Documents::punctuations.count(tokens[start])) {
+            if (!Documents::punctuations.count(tokens[end])) return -INF;
+            if (!puncMap.count(Documents::punctuations[tokens[start]]) || !puncMap.count(Documents::punctuations[tokens[end]])) {
+                return -100;
+            }
+        }
+        if (Documents::punctuations.count(tokens[end])) return -INF;
         
         
         // cerr << "Get One" << endl;
-        double PCost = 0;
+        double PCost = 0.0;
+        bool one_punc = false;
         for (int i = start + 1; i < end ; ++i) {
           if (Documents::isPunc(tokens[i])) {
-            if (!Documents::separatePunc.count(Documents::posid2Tag[tags[i-1]]) && !Documents::separatePunc.count(Documents::posid2Tag[tags[i+1]])) {
-                PCost += log(connect[tags[i-1]][tags[i+1]] + EPS);
+            if (one_punc) {
+                // cerr << "this happens" << endl;
+                return -INF;
             }
+            one_punc = true;
+            /*
+            if (!Documents::isPunc(tokens[i-1]) && !Documents::isPunc(tokens[i+1])) {
+                if (tags[i-1] < connect.size() && tags[i+1] < connect.size())
+                    PCost += log(connect[tags[i-1]][tags[i+1]] + EPS);
+            }
+            */
           }   
         }
         return PCost;
@@ -585,23 +603,40 @@ public:
                     // TODO(branzhu): incorporate 
                     // if (Documents::isPunc(tokens[i]) && !Documents::isPunc(tokens[j])) continue;
                     // if (!Documents::isPunc(tokens[i]) && Documents::isPunc(tokens[j])) continue;
+                    
+                    
                     if (j > i) {
                         int index = GetSubtreeID(deps, i, j+1);
-                        // int index = GetSubtreeID(deps);
                         multiConstraints += deps_prob[index];
                     }
+                    
+                    
+
                     // TODO(branzhu): add punc cost 
+                    
                     
                     if (j > i) {
                         multiConstraints += GetPuncCost(tokens, tags, i, j);
                     }
+                    
 
                     // double tagCost = (j + 1 < tokens.size() && tags[j] >= 0 && tags[j + 1] >= 0) ? disconnect[tags[j]][tags[j + 1]] : 0;
+                    
                     
                     if (f[i] + p + multiConstraints > f[j + 1]) {
                         f[j + 1] = f[i] + p + multiConstraints;
                         pre[j + 1] = i;
                     }
+                    
+                    
+                    /*
+                    if (f[i] + p  > f[j + 1]) {
+                        f[j + 1] = f[i] + p;
+                        pre[j + 1] = i;
+                    }
+                    */
+                    
+
                 }
             }
             if (impossible) {
@@ -797,6 +832,7 @@ public:
                 }
                 if (trie[u].id != -1 && trie[u].id < id2ends.size()) {
                     PATTERN_ID_TYPE id = trie[u].id;
+                    // cerr << id << endl;
                     separateMutex[id & SUFFIX_MASK].lock();
                     ++ patterns[id].currentFreq;
                     if (RELATION_MODE || i - j > 1 || i - j == 1 && unigrams[patterns[id].tokens[0]] >= MIN_SUP) {
@@ -804,29 +840,6 @@ public:
                     }
                     separateMutex[id & SUFFIX_MASK].unlock();
                 }
-                /*
-                u = 0;
-                bool local_mis = false;
-                for (int k = j; k < i; ++ k) {
-                    if (trie_pos[u].children.count(postags[k]) > 0) {
-                        u = trie_pos[u].children[postags[k]];
-                    }
-                    else {
-                        local_mis = true;
-                        // mistakes += 1;
-                        // i = j;
-                        break;
-                    }
-                }
-                if (!local_mis && trie_pos[u].id != -1) {
-                    PATTERN_ID_TYPE id = trie_pos[u].id;
-                    separateMutex[id & SUFFIX_MASK].lock();
-                    ++ patterns_tag[id].currentFreq;
-                    if (i - j > 1 || i - j == 1 && unigrams_tag[patterns_tag[id].tokens[0]] >= MIN_SUP) {
-                        id2ends_tag[id].push_back(sentences[senID].first + i - 1);
-                    }
-                    separateMutex[id & SUFFIX_MASK].unlock();
-                }*/
                 
                 i = j;
             }
@@ -881,6 +894,7 @@ public:
                         DepsMutex[index & SUFFIX_MASK].unlock();
                     }
 
+                    /*
                     for (int k = j + 1; k < i - 1; ++ k) {
                         if (Documents::isPunc(tokens[k])) {
                             if (!Documents::separatePunc.count(Documents::posid2Tag[tags[k - 1]]) && !Documents::separatePunc.count(Documents::posid2Tag[tags[k + 1]])) {
@@ -891,11 +905,13 @@ public:
                             }
                         }
                     }
+                    */
                 }
     			i = j;
     		}
         }
         
+        /*
         for (int i = 0; i < connect.size(); ++ i) {
             for (int j = 0; j < connect[i].size(); ++ j) {
                 if (!Documents::separatePunc.count(Documents::posid2Tag[i]) && !Documents::separatePunc.count(Documents::posid2Tag[j])) {
@@ -907,6 +923,7 @@ public:
                 }
             }
         }
+        */
         
         //normalizePosTags();
         

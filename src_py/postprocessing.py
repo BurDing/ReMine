@@ -1,7 +1,98 @@
 import sys
 import argparse,json,operator
+import numpy as np
 
 class PostProcessor(object):
+	def load_em_emb(self, em_emb_path):
+		self.em_emb = dict()
+		
+		with open(em_emb_path, 'rb') as IN:
+			IN.readline()
+			for line in IN:
+				line=line.strip().split(' ')
+				self.em_emb[line[0]] = np.asarray(map(float, line[1:]))
+		print("em emb loaded!")
+	
+	def load_rm_emb(self, rm_emb_path):
+		self.rm_emb = dict()
+
+		with open(rm_emb_path, 'rb') as IN:
+			IN.readline()
+			for line in IN:
+				line=line.strip().split(' ')
+				self.rm_emb[line[0]] = np.asarray(map(float, line[1:]))
+		print("rm emb loaded!")
+
+	def rank_tri(self, train, rank_out):
+		candidates = []
+		with open(train, 'r') as IN, open(rank_out, 'w') as OUT:
+			previous_doc = -1
+			for line_num, line in enumerate(IN):
+				#print line_num
+				tmp = line.strip().split(' ')
+				if int(tmp[3]) > previous_doc and len(candidates) > 0:
+					previous_doc = int(tmp[3])
+					candidates.sort(key=lambda x: x[1])
+					for i in candidates:
+						OUT.write(i[0].strip()+'\t'+str(i[1])+'\n')
+					candidates = []
+				
+				em1 = self.em_emb[tmp[0]]
+				em2 = self.em_emb[tmp[1]]
+				rms = tmp[2].strip().split(',')
+				#if int(tmp[3]) > 
+				try:
+					rm = self.rm_emb[rms[0]]
+					for r in rms[1:]:
+						rm += self.rm_emb[r]
+					rm /= len(rms)
+					candidates.append((line, np.linalg.norm(em1+rm-em2, ord=1)))
+				except:
+					print(line_num)
+					print(rms)
+				#if line_num > 30:
+				#	break
+	def generate_output(self, rank_out, train_json, out):
+		with open(rank_out) as IN, open(train_json) as IN_JSON, open(out, 'w') as OUT:
+			lines = IN_JSON.readlines()
+			print(len(lines))
+			for line in IN:
+
+				tmp = line.strip().split('\t')
+				score = tmp[1]
+				tmp = tmp[0].split(' ')
+				docID = tmp[3]
+				tmp_json = json.loads(lines[int(tmp[4])])
+				predicates = '_'.join(tmp_json['tokens'])
+				for rp in tmp[2].strip().split(','):
+					predicates = predicates.replace(rp, '['+rp+']')
+				
+				OUT.write(docID + '\t' + score + '\t' + tmp_json['entityMentions'][0][2] + '\t' + predicates
+					+ '\t' + tmp_json['entityMentions'][1][2]+'\n')
+
+			
+	def compareLineByLine(self, test_file_a, test_file_b, out):
+		with open(test_file_a) as IN_A, open(test_file_b) as IN_B, open(out, 'w') as OUT:
+			cnt = 1
+			for line_a, line_b in zip(IN_A, IN_B):
+				pred_a = set()
+				pred_b = set()
+				for item in line_a.split(']_['):
+					if ':EP' in item:
+						pred_a.add(item.rstrip(' :EP').strip().replace('(','-lrb-').replace(')','-rrb-'))
+					elif ':BP' in item:
+						pred_a.add(item.rstrip(' :BP').strip().replace('(','-lrb-').replace(')','-rrb-'))
+				for item in line_b.split(']_['):
+					if ':EP' in item:
+						pred_b.add(item.rstrip(' :EP').strip().replace('(','-lrb-').replace(')','-rrb-'))
+					elif ':BP' in item:
+						pred_b.add(item.rstrip(' :BP').strip().replace('(','-lrb-').replace(')','-rrb-'))
+				OUT.write(str(cnt) + '\t')
+				OUT.write('_'.join(list(pred_a - pred_b))+'\t\t')
+				OUT.write('_'.join(list(pred_b - pred_a))+'\n')
+				cnt += 1
+				
+	
 	def extract(self,test_file,json_file,pos_file,output):
 		with open(test_file,'r') as IN, open(json_file, 'r') as IN_JSON, open(pos_file, 'r') as IN_POS, open(output,'w') as OUT:
 			e_not_found = 0
@@ -11,7 +102,9 @@ class PostProcessor(object):
 				pred_rm = []
 				for item in line.split(']_['):
 					if ':EP' in item:
-						pred.append(item.rstrip(' :EP').strip().replace('(','-LRB-').replace(')','-RRB-'))
+						pred.append(item.rstrip(' :EP').strip().replace('(','-lrb-').replace(')','-rrb-'))
+					elif ':BP' in item:
+						pred.append(item.rstrip(' :BP').strip().replace('(','-lrb-').replace(')','-rrb-'))
 				tmp = {}
 				tmp['tokens'] = json_line.strip().split(' ')
 				tmp['pos'] = pos_line.strip().split(' ')
@@ -93,8 +186,12 @@ class PostProcessor(object):
 					#ranges + range(entityMentions[idx2][0],entityMentions[idx2][1])
 					#ranges = map(lambda x:str(x[0])+'_'+x[1],sorted(list(ranges)))
 					#print ranges
+					
 					dump['tokens'] = list(map(lambda x: tokens[x], ranges))
 					dump['pos'] = list(map(lambda x: tags[x], ranges))
+					#dump['tokens'] = tokens[ranges[0]:ranges[-1]+1]
+					dump['doc'] = cnt
+					#dump['pos'] = tags[ranges[0]:ranges[-1]+1]
 					dump['entityMentions'] = [entityMentions[idx1], entityMentions[idx2]]
 					for i in ranges:
 						fout.write(str(deps[i]) + '\n')
@@ -111,13 +208,13 @@ class PostProcessor(object):
 			print(cnt)
 		fout.close()
 
-	def loadRMTest(self, test_file,json_file,output, out1,out2):
+	def loadRMTest(self, test_file,json_file,output, out1,out2, out3):
 		self.punc = ['.',',','"',"'",'?',':',';','-','!','(',')','``',"''", '']
 		print(output)
 		ems=set()
 		rms=set()
-		with open(test_file,'r') as IN, open(json_file, 'r') as IN_JSON, open(output,'w') as OUT:
-			for line, json_line in zip(IN, IN_JSON):
+		with open(test_file,'r') as IN, open(json_file, 'r') as IN_JSON, open(output,'w') as OUT, open(out3, 'w') as N_OUT:
+			for idx, (line, json_line) in enumerate(zip(IN, IN_JSON)):
 				pred=[]
 				for item in line.split(']_['):
 					if ':RP' in item:
@@ -127,13 +224,18 @@ class PostProcessor(object):
 					#if ' ' in item:
 					#if ' ' in item.strip():
 							pred.append(item)
-				if len(pred) > 0:
-					tmp = json.loads(json_line)['entityMentions']
-					em_1 = tmp[0][2].lower().replace(' ', '_')
-					em_2 = tmp[1][2].lower().replace(' ', '_')
+				tmp_json = json.loads(json_line)
+				if 'VB' in ''.join(tmp_json['pos']) and len(pred) > 0:
+					tmp = tmp_json['entityMentions']
+					em_1 = tmp[0][2].lower().replace("''",'').replace(' ', '_')
+					em_2 = tmp[1][2].lower().replace("''",'').replace(' ', '_')
+					if len(em_1) == 0 or len(em_2) == 0:
+						continue
 					ems.add(em_1)
 					ems.add(em_2)
-					OUT.write(em_1 +' '+ em_2 + ' '+','.join(pred) + '\n')
+					OUT.write(em_1 +' '+ em_2 + ' '+','.join(pred) + ' ' + str(tmp_json['doc'])+ ' ' + str(idx) + '\n')
+				else:
+					N_OUT.write(json_line)
 		with open(out1, 'w') as w1, open(out2, 'w') as w2:
 			for i in list(ems):
 				w1.write(i+'\n')
@@ -155,6 +257,8 @@ if __name__ == '__main__':
 	                    help='Embeddings path')
 	parser.add_argument('--out3', nargs='?', default='emb/karate.emb',
 	                    help='Embeddings path')
+	parser.add_argument('--out4', nargs='?', default='emb/karate.emb',
+	                    help='Embeddings path')
 
 	parser.add_argument('--op', help='Type of supervision')
 
@@ -167,4 +271,12 @@ if __name__ == '__main__':
 	elif args.op == 'generatepath':
 		tmp.generatePathwords(args.in1, args.in2, args.in3, args.out1, args.out2)
 	elif args.op == 'generatetri':
-		tmp.loadRMTest(args.in1, args.in2, args.out1, args.out2, args.out3)
+		tmp.loadRMTest(args.in1, args.in2, args.out1, args.out2, args.out3, args.out4)
+	elif args.op == 'ranktri':
+		tmp.load_em_emb(args.in1)
+		tmp.load_rm_emb(args.in2)
+		tmp.rank_tri(args.in3, args.out1)
+	elif args.op == 'study1':
+		tmp.compareLineByLine(args.in1, args.in2, args.out1)
+	elif args.op == 'generateoutput':
+		tmp.generate_output(args.in1, args.in2, args.out1)

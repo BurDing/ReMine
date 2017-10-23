@@ -18,27 +18,38 @@ void split(const string &s, char delim, vector<string>& result) {
     }
 }
 
-void printSubtree(const vector<vector<int>>& parent, const vector<string> tags, set<int>& bgs, int index) {
-    if (verb_tags.count(tags[index - 1])) {
-        for (int i = 0; i < parent[index].size(); ++i)
-            bgs.insert(parent[index][i]);
+void printSubtree(const vector<vector<int>>& parent, const vector<string> tags, set<int>& bgs, int index, int left, int right) {
+    // cerr << index << " inserted !" << endl;
+    // if (verb_tags.count(tags[index - 1])) {
+    if (index <= right && index > left) {
+        for (int i = 0; i < parent[index].size(); ++i) {
+            printSubtree(parent, tags, bgs, parent[index][i], left, right);
+        }
+            //bgs.insert(parent[index][i]);
+        bgs.insert(index);
     }
-    bgs.insert(index);
+
+    
 }
 
-void process(const vector<int>& deps, const vector<string>& tags, const vector<pair<int, int>>& entityMentions, FILE* out) {
+void process(const vector<int>& deps, const vector<string>& tags, const vector<string>& types, const vector<pair<int, int>>& entityMentions, FILE* out) {
 	vector<vector<int>> children(deps.size() + 1);
     vector<vector<int>> parents(deps.size() + 1);
     int root;
+
+    assert(deps.size() == types.size());
     for (int i = 0; i < deps.size(); ++ i) {
         int a = i + 1, b = deps[i];
         if (b == 0) {
         	children[a].push_back(a);
         }
         parents[b].push_back(a);
+        int multi_root = 0;
         while (b != 0) {
+            ++ multi_root;
         	children[a].push_back(b);
         	b = deps[b - 1];
+            if (multi_root > deps.size()) return;
     	}	
     }
 
@@ -58,8 +69,8 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<p
     }
     */
     
-
     vector<vector<int>> out_nodes(entityMentions.size());
+    vector<vector<string>> out_types(entityMentions.size());
     vector<string> segments;
 
     for (int i = 0; i < entityMentions.size(); ++i) {
@@ -74,6 +85,7 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<p
     			else {
     				out_nodes[i].push_back(deps[index]);
     			}
+                out_types[i].push_back(types[index]);
     		}
     	}
     }
@@ -83,11 +95,20 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<p
         int distance = deps.size();
         int min_i = 0;
         int min_start = 0, min_end = 0, min_parent = 0;
+        string start_type, end_type;
         set<int> bgs;
         for (int i = 0; i < j; ++i) {
             // Fix multi-out_nodes problem in this version
-            for (int start : out_nodes[i]) 
-                for (int end : out_nodes[j]) {
+            for(int start_index = 0; start_index < out_nodes[i].size(); ++ start_index)
+                for (int end_index = 0; end_index < out_nodes[j].size(); ++ end_index) {
+                    if (out_types[i][start_index].find("nmod") != string::npos || out_types[i][start_index].find("dobj") != string::npos || 
+                       out_types[j][end_index].find("nsubj") != string::npos )
+                        continue;
+
+            //for (int start : out_nodes[i]) 
+            //    for (int end : out_nodes[j]) {
+                    int start = out_nodes[i][start_index];
+                    int end = out_nodes[j][end_index];
                     int min_depth = min(children[start].size(), children[end].size());
                     int parent = 0, k;
 
@@ -97,28 +118,37 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<p
                         }
                     }
 
-                    if (children[end].size() + children[start].size() + 2 - 2 * parent < distance) {
+                    if (children[end].size() + children[start].size() + 2 - 2 * parent <= distance) {
                         distance = children[end].size() + children[start].size() + 2 - 2 * parent;
                         min_start = start;
                         min_end = end;
                         min_parent = parent;
                         min_i = i;
+                        start_type = out_types[i][start_index];
+                        end_type = out_types[j][end_index];
                     }
                 }
         }
 
-        assert(min_parent != 0);
+        // assert(min_parent != 0);
+        if (min_parent == 0) continue;
 
+        // cerr << min_i << " " << j << "\t" << min_start << "\t" << min_end << "\t" << min_parent << endl;
+        // cerr << children[min_start].size() << "\t" << children[min_end].size() << endl;
         for (int st = min_parent; st < children[min_start].size(); ++st) {
-            printSubtree(parents, tags, bgs, children[min_start][st]);
+            printSubtree(parents, tags, bgs, children[min_start][st], entityMentions[min_i].second, entityMentions[j].first);
         }
 
-        printSubtree(parents, tags, bgs, min_start);
-        for (int st = min_parent; st < children[min_end].size(); ++st) {
-            printSubtree(parents, tags, bgs, children[min_end][st]);
-        }
-        printSubtree(parents, tags, bgs, min_end);
+        printSubtree(parents, tags, bgs, min_start, entityMentions[min_i].second, entityMentions[j].first);
+        if (min_start != min_end) {
+            for (int st = min_parent; st < children[min_end].size(); ++st) {
+                printSubtree(parents, tags, bgs, children[min_end][st], entityMentions[min_i].second, entityMentions[j].first);
+            }
 
+            printSubtree(parents, tags, bgs, min_end, entityMentions[min_i].second, entityMentions[j].first);
+        }
+        
+        /*
         vector<int> erased;
 
         for (const auto& path : bgs) {
@@ -129,7 +159,9 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<p
         for (const auto& path : erased) {
             bgs.erase(path);
         }
+        */
 
+        // fprintf(out, "%d_%s %d_%s\t", min_i, start_type.c_str(), j, end_type.c_str());
         fprintf(out, "%d %d\t", min_i, j);
 
         for (const auto& t : bgs) {
@@ -224,16 +256,26 @@ int main(int argc, char* argv[])
 {
 	FILE* depIn = tryOpen(argv[1], "r");
 	vector<vector<int>> depPaths;
+    vector<vector<string>> depTypes;
+    char currentDep[100];
 	while (getLine(depIn)) {
 		vector<int> tmp;
+        vector<string> tmp_type;
 		depPaths.push_back(tmp);
+        depTypes.push_back(tmp_type);
 		stringstream sin(line);
 		for(string temp; sin >> temp;) {
-			depPaths.back().push_back(stoi(temp));
-			//cout << temp << " ";
+            strcpy(currentDep, temp.c_str());
+            int idx = atoi(strtok (currentDep, "_"));
+            int idx_dep = atoi(strtok (NULL, "_"));
+            string xxx(strtok(NULL, "_"));
+			depPaths.back().push_back(idx_dep);
+            depTypes.back().push_back(xxx);
+            // cout << depPaths.back().back() << " " << depTypes.back().back() << endl;
 		}
 	}
     fclose(depIn);
+
     vector<vector<string>> posPaths;
     FILE* posIn = tryOpen(argv[3], "r");
     while (getLine(posIn)) {
@@ -252,7 +294,7 @@ int main(int argc, char* argv[])
 	int docs = 0;
     FILE* out = tryOpen(argv[4], "w");
     // FILE* out_dep = tryOpen(argv[5], "w");
-
+    cout << "dependencies readed" << endl;
 	while (getLine(emIn)) {
         // cerr << docs << "DOC" << endl;
 		stringstream sin(line);
@@ -263,9 +305,8 @@ int main(int argc, char* argv[])
 			assert(segs.size() == 2);
 			ems.push_back(make_pair(stoi(segs[0]), stoi(segs[1])));
 		}
-        process(depPaths[docs], posPaths[docs], ems, out);
+        process(depPaths[docs], posPaths[docs], depTypes[docs], ems, out);
         fprintf(out, "\n");
-        //cout << endl;
         ++ docs;
         // break;
         //if (docs == 5)

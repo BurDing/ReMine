@@ -192,18 +192,18 @@ def findFBTypes(outDir, outFile):
     err_count = 0
     # Get freebase mid and types
     for line in f:
-        try:
-            did, surfaceForm, URI, similarityScore, rank = line.strip().split('\t')
-            dbID = URI[28:]
-            sim_score = float(similarityScore)
-            rank_score = float(rank)
-            if dbID in dbIdToFbId and dbIdToFbId[dbID] in fbIdToFbType:
-                fbID = dbIdToFbId[dbID]
-                types = ', '.join(fbIdToFbType[fbID])
-                g.write(did + '\t' + surfaceForm + '\t' + fbID + '\t' + types
-         + '\t' + similarityScore + '\t' + rank + '\n')
-        except:
-            err_count += 1
+        #try:
+        did, offset, surfaceForm, URI, similarityScore, rank = line.strip().split('\t')
+        dbID = URI[28:]
+        sim_score = float(similarityScore)
+        rank_score = float(rank)
+        if dbID in dbIdToFbId and dbIdToFbId[dbID] in fbIdToFbType:
+            fbID = dbIdToFbId[dbID]
+            types = ', '.join(fbIdToFbType[fbID])
+            g.write(did + '\t' + surfaceForm + '\t' + fbID + '\t' + types
+     + '\t' + similarityScore + '\t' + rank + '\n')
+        #except:
+        #    err_count += 1
 
     print err_count, 'lines failed.'
     g.close()
@@ -228,10 +228,10 @@ if __name__ == "__main__":
     outFile=sys.argv[3] # filename, e.g., DBLP
 
     ### add doc index (if not index is associated with each doc)
-    addDocIndex(inFileName, outDir, outFile)
+    #addDocIndex(inFileName, outDir, outFile)
 
     ### DBpedia SpotLight
-    link(outDir, outFile, 0.2) 
+    #link(outDir, outFile, 0.2)
 
     ### Map to freebase type
     entityMapper('/shared/data/xren7/EntityLinking/resource/freebase_links.nt') # freebase_links.nt

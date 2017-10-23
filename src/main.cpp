@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
     //return -1;
     //Parser remine;
     if (ENABLE_POS_TAGGING) {
-        Segmentation::initializePosTags(Documents::posTag2id.size());
+        // Segmentation::initializePosTags(Documents::posTag2id.size());
         Segmentation::initializeDeps(Documents::sentences, MAX_LEN);
         
         /*for (int i = 0; i < Segmentation::connect.size(); ++ i) {

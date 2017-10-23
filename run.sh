@@ -1,11 +1,17 @@
 #java -cp corpus-processor.jar nlptools.SentenceAnnotator /shared/data/qiz3/data/nyt/train.txt /shared/data/qiz3/data/nyt/train
+echo ${green}===Entity Linking===${reset}
+python src_py/distantSupervision.py --op=entityLinker --in1=/shared/data/qiz3/_Github/ReMine/remine_extraction/ver2/train.json --in2=data_remine/NYT_FBtyped.txt --out=/shared/data/qiz3/_Github/ReMine/remine_extraction/ver2/train_annotated.json
+python src_py/distantSupervision.py --op=entityExtractor --in1=/shared/data/qiz3/_Github/ReMine/remine_extraction/ver2/train_annotated.json --out=/shared/data/qiz3/_Github/ReMine/remine_extraction/ver2/nyt.entities
+python src_py/distantSupervision.py --op=relationLinker --in1=/shared/data/qiz3/_Github/ReMine/remine_extraction/ver2/train_annotated.json --in2=pickle --out=/shared/data/qiz3/_Github/ReMine/remine_extraction/ver2/nyt.relations
+
 
 echo ${green}===Tokenizaztion===${reset}
 python3 src_py/preprocessing.py --op=train --in1=/shared/data/qiz3/data/nyt/train.lemmas.txt --in2=/shared/data/qiz3/data/nyt/train.pos.txt --in3=/shared/data/qiz3/data/nyt/train.dep.txt
-python3 src_py/preprocessing.py --op=chunk --in1=/shared/data/qiz3/data/nyt/train.lemmas.txt --in2=/shared/data/qiz3/data/nyt/train.pos.txt
+python3 src_py/preprocessing.py --op=test --in1=/shared/data/qiz3/data/nyt/test.lemmas.txt --in2=/shared/data/qiz3/data/nyt/test.pos.txt --in3=/shared/data/qiz3/data/nyt/test.dep.txt
+python3 src_py/preprocessing.py --op=chunk --in1=/shared/data/qiz3/data/nyt/total.lemmas.txt --in2=/shared/data/qiz3/data/nyt/total.pos.txt
 python3 src_py/preprocessing.py --op=translate --in1=data/EN/stopwords.txt --out=tmp_remine/tokenized_stopwords.txt
-python3 src_py/preprocessing.py --op=translate --in1=data_remine/nyt_6k_quality.txt --out=tmp_remine/tokenized_quality.txt
-python3 src_py/preprocessing.py --op=translate --in1=data_remine/nyt_6k_negatives.txt --out=tmp_remine/tokenized_negatives.txt
+python3 src_py/preprocessing.py --op=translate --in1=remine_extraction/ver2/nyt.entities --out=tmp_remine/tokenized_quality.txt
+python3 src_py/preprocessing.py --op=translate --in1=remine_extraction/ver2/nyt.relations --out=tmp_remine/tokenized_negatives.txt
 
 bash remine_exp.sh
 bash remine_seg.sh
@@ -21,9 +27,13 @@ echo ${green}===Relation Mining[Local Optimization]===${reset}
 python3 src_py/postprocessing.py --op=generatepath --in1=remine_extraction/ver2/train.json --in2=remine_extraction/ver2/shortest_paths.txt --in3=/shared/data/qiz3/data/nyt/train.dep_2.txt --out1=remine_extraction/ver2/train_rm.json --out2=tmp_remine/rm_deps_train.txt
 python3 src_py/preprocessing.py --op=train_rm --in1=remine_extraction/ver2/train_rm.json
 bash remine_rm_exp.sh
-bash remine_seg.sh
-python3 src_py/preprocessing.py --op=segment_rm --in1=tmp_remine/rm_tokenized_segmented_sentences.txt --out=results_remine/segmentation.txt
-python3 src_py/postprocessing.py --op=generatetri --in1=results_remine/segmentation.txt --in2=remine_extraction/ver2/train_rm.json --out1=remine_extraction/ver2/train.txt --out2=remine_extraction/ver2/entity.txt --out3=remine_extraction/ver2/relation.txt
+bash remine_rm_seg.sh
+python3 src_py/preprocessing.py --op=segment_rm --in1=tmp_remine/rm_tokenized_segmented_sentences.txt --out=results_remine/rm_segmentation.txt
+python3 src_py/postprocessing.py --op=generatetri --in1=results_remine/rm_segmentation.txt --in2=remine_extraction/ver2/train_rm.json --out1=remine_extraction/ver2/train.txt --out2=remine_extraction/ver2/entity.txt --out3=remine_extraction/ver2/relation.txt --out4=remine_extraction/ver2/train_rm_np.json
 
 echo ${green}===Knowledge Base Construction[Global Optimization]===${reset}
 ./utils/TransE/code/transe -alpha 0.001 -samples 500 -entity remine_extraction/ver2/entity.txt -relation remine_extraction/ver2/relation.txt -triple remine_extraction/ver2/train.txt -output-en entity.emb -output-rl relation.emb -binary 0 -size 100 -threads 20
+
+python src_py/postprocessing.py --op=ranktri --in1=entity.emb --in2=relation.emb --in3=remine_extraction/ver2/train.txt --out1=remine_extraction/ver2/rank.txt
+
+python3 src_py/postprocessing.py --op=study1 --in1=results_remine/segmentation.txt --in2=results_remine/segmentation_0.txt --out1=remine_extraction/ver2/study1.txt

@@ -1,7 +1,7 @@
 import sys
 import argparse
 import utils
-import EntityLinker_freebase
+#import EntityLinker_freebase
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="Run node2vec.")

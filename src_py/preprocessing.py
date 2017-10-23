@@ -47,10 +47,53 @@ class PreProcessor(object):
 					if subtree.label() == 'NP':
 						branch = subtree.leaves()
 						if len(branch) > 1:
-							out.write(' '.join(list(map(lambda x:x[0]+'_'+x[1], branch))) + '\n')
+							out.write(' '.join(list(map(lambda x:str(self.inWordmapping(x[0]))+'_'+x[1], branch))) + '\n')
+							#out.write(' '.join(list(map(lambda x:x[0]+'_'+x[1], branch))) + '\n')
 							#chunks.add(map(lambda x:x[0]+'_'+x[1], branch))
 			#print(len(chunks))
 
+	def tokenized_test(self, docIn, posIn, depIn):
+		fdep = open('tmp_remine/deps_test.txt', 'w')
+		fpos = open('tmp_remine/pos_tags_test.txt', 'w')
+		fdoc = open('tmp_remine/tokenized_test.txt', 'w')
+		fcase = open('tmp_remine/case_tokenized_test.txt', 'w')
+
+		self.test_tokens = []
+		self.test_words = []
+		with open(docIn) as doc, open(posIn) as pos, open(depIn) as dep:
+			for t,p,d in zip(doc,pos,dep):
+				_word = []
+				_token = []
+				tokens = t.strip().split(' ')
+				postags = p.strip().split(' ')
+				deps = d.strip().split(' ')
+				tmp = []
+				for i,d in enumerate(deps):
+					dd=d.split('_')
+					tmp.append(str(i)+'_'+dd[0])
+				assert(len(tokens) == len(postags) == len(deps))
+				for i,w in enumerate(tokens):
+					if i != len(tokens) - 1:
+						fdoc.write(self.inWordmapping(w)+' ')
+						_token.append(self.inWordmapping(w))
+					else:
+						if w not in self.punc:
+							fdoc.write(self.inWordmapping(w)+'\n')
+							_token.append(self.inWordmapping(w))
+						else:
+							fdoc.write(w+'\n')
+					_word.append(w)
+					fcase.write(self.case(w))
+				self.test_tokens.append(_token)
+				self.test_words.append(_word)
+				fcase.write('\n')
+				fdep.write('\n'.join(tmp) + '\n')
+				fpos.write('\n'.join(postags) + '\n')
+
+		fdep.close()
+		fpos.close()
+		fdoc.close()
+		fcase.close()
 
 	def tokenized_train(self, docIn, posIn, depIn):
 		fdep = open('tmp_remine/deps_train.txt', 'w')
@@ -126,6 +169,10 @@ class PreProcessor(object):
 	def dump_rm(self):
 		_pickle.dump(self.test_words, open('tmp_remine/rm_test_words.p', 'wb'))
 		_pickle.dump(self.test_tokens, open('tmp_remine/rm_test_tokens.p', 'wb'))
+
+	def dump_test(self):
+		_pickle.dump(self.test_words, open('tmp_remine/real_test_words.p', 'wb'))
+		_pickle.dump(self.test_tokens, open('tmp_remine/real_test_tokens.p', 'wb'))
 
 	def dump(self):
 		with open('tmp_remine/tokenized_punctuations.txt','w') as OUT:
@@ -206,8 +253,8 @@ class PreProcessor(object):
 		queue=[]
 		r_ptr=0
 		c_ptr=0
-		start=['<None>','<ENTITY>','<RELATION>']
-		end=['</None>','</ENTITY>','</RELATION>']
+		start=['<None>','<EP>','<RP>','<BP>']
+		end=['</None>','</EP>','</RP>', '</BP>']
 		start_phrase=False
 		with open(seg_path,'r') as _seg, open(outpath,'w') as OUT:
 			for line in _seg:
@@ -234,10 +281,12 @@ class PreProcessor(object):
 								if 'None' in queue[0]:
 									#OUT.write(':BP,')
 									OUT.write(']_[')
-								elif 'ENTITY' in queue[0]:
+								elif 'EP' in queue[0]:
 									OUT.write(':EP]_[')
-								else:
+								elif 'RP' in queue[0]:
 									OUT.write(':RP]_[')
+								elif 'BP' in queue[0]:
+									OUT.write(':BP]_[')
 							queue.pop(0)
 					elif c_ptr < len(self.test_tokens[r_ptr]) and queue[0] == self.test_tokens[r_ptr][c_ptr]:
 						if start_phrase:
@@ -272,7 +321,12 @@ if __name__ == '__main__':
 	if args.op == 'train':
 		tmp.tokenized_train(args.in1, args.in2, args.in3)
 		tmp.dump()
+	elif args.op == 'test':
+		tmp.load()
+		tmp.tokenized_test(args.in1, args.in2, args.in3)
+		tmp.dump_test()
 	elif args.op == 'chunk':
+		tmp.load()
 		tmp.chunk_train(args.in1, args.in2)
 	elif args.op == 'translate':
 		tmp.load()

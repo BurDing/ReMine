@@ -26,6 +26,9 @@ using namespace std;
 #define PATTERN_CHUNK_SIZE 10
 #define SENTENCE_CHUNK_SIZE 5
 #define POINT_CHUNK_SIZE 5
+#pragma omp declare reduction(vec_double_plus : std::vector<double> : \
+                              std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+                    initializer(omp_priv = omp_orig)
 
 const int SUFFIX_MASK = (1 << 20) - 1; // should be 2^k - 1
 mutex separateMutex[SUFFIX_MASK + 1];

@@ -339,29 +339,30 @@ inline vector<Pattern> generateAll(string LABEL_METHOD, string LABEL_FILE, strin
             exclude.insert(ret[i].hashValue);
         }
         */
+        // vector<int> negatives;
 
-        for (PATTERN_ID_TYPE i = 0; i < patterns.size(); ++ i) {
+        for (PATTERN_ID_TYPE i = 0; i < id2ends.size(); ++ i) {
             if (patterns[i].size() < 1) {
                 continue;
             }
             if (include.count(patterns[i].hashValue)) {
                 if (needPos) {
                     ret.push_back(patterns[i]);
-                    ret.back().label = 2;
-                    patterns[i].label = 2;
+                    ret.back().label = 1;
+                    patterns[i].label = 1;
                 }
             } else if (exclude.count(patterns[i].hashValue)) {
                 if (needPos) {
                     ret.push_back(patterns[i]);
-                    ret.back().label = 0;
-                    patterns[i].label = 0;
+                    ret.back().label = 2;
+                    patterns[i].label = 2;
                 }
             } 
             else if (!include.count(patterns[i].hashValue)) {
                 if (needNeg) {
                     ret.push_back(patterns[i]);
-                    ret.back().label = 1;
-                    patterns[i].label = 1;
+                    ret.back().label = 0;
+                    patterns[i].label = 0;
                     // negatives.push_back(i);
                 }
             }
@@ -372,6 +373,7 @@ inline vector<Pattern> generateAll(string LABEL_METHOD, string LABEL_FILE, strin
         for (int id : negatives) {
             ret.push_back(patterns[id]);
             ret.back().label = 0;
+            patterns[id].label = 0;
         }
         */
 
@@ -379,9 +381,9 @@ inline vector<Pattern> generateAll(string LABEL_METHOD, string LABEL_FILE, strin
 
     int cntPositives = 0, cntNegatives = 0;
     for (PATTERN_ID_TYPE i = 0; i < ret.size(); ++ i) {
-        if (ret[i].label == 0 || ret[i].label == 2) {
+        if (ret[i].label == 2 || ret[i].label == 1) {
             ++ cntPositives;
-        } else if (ret[i].label == 1) {
+        } else if (ret[i].label == 0) {
             ++ cntNegatives;
         } else {
             assert(false); // It should not happen!

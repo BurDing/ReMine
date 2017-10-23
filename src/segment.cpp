@@ -39,7 +39,8 @@ void process(const vector<TOTAL_TOKENS_TYPE>& tokens, const vector<pair<TOTAL_TO
             u = trie[u].children[tokens[k]];
         }
         quality &= trie[u].id >= 0 && (
-                    patterns[trie[u].id].size() > 1 && patterns[trie[u].id].quality >= SEGMENT_MULTI_WORD_QUALITY_THRESHOLD ||
+                    patterns[trie[u].id].size() > 1 && patterns[trie[u].id].indicator == "BP" && patterns[trie[u].id].quality >= SEGMENT_MULTI_WORD_QUALITY_THRESHOLD ||
+                    patterns[trie[u].id].size() > 1 && patterns[trie[u].id].indicator != "BP" && patterns[trie[u].id].quality >= SEGMENT_MULTI_PHRASE_QUALITY_THRESHOLD ||
                     patterns[trie[u].id].size() == 1 && patterns[trie[u].id].quality >= SEGMENT_SINGLE_WORD_QUALITY_THRESHOLD
                    );
 
@@ -88,6 +89,9 @@ int main(int argc, char* argv[])
     omp_set_num_threads(NTHREADS);
 
     Dump::loadSegmentationModel(SEGMENTATION_MODEL);
+    if (ENABLE_POS_TAGGING) {
+        Documents::loadPuncwords(PUNC_FILE);
+    }
     
     //for (int i=0;i<patterns.size();++i)
     //    cerr<<"check:"<<patterns[i].postagquality<<endl;
@@ -109,7 +113,6 @@ int main(int argc, char* argv[])
             multigram_cnt+=1;
     }
     cerr << "unigram_cnt:" << unigram_cnt << " multigram_cnt:" << multigram_cnt <<endl;
-
     //    cerr<<"check:"<<patterns[i].postagquality<<endl;
 
     constructTrie(); // update the current frequent enough patterns
@@ -135,8 +138,9 @@ int main(int argc, char* argv[])
 
     FILE* out = tryOpen("tmp_remine/tokenized_segmented_sentences.txt", "w");
 
-
+    cerr << Segmentation::connect.size() << endl;
     while (getLine(in)) {
+        // cerr << "+";
         stringstream sin(line);
         vector<TOTAL_TOKENS_TYPE> tokens;
         // vector<TOTAL_TOKENS_TYPE> deps;

@@ -10,6 +10,7 @@ namespace RandomForestRelated
 
 vector<double> featureImportance;
 
+int K_OUT_OF_N = 1000;
 int RANDOM_FEATURES = 4;
 int RANDOM_POSITIONS = 8;
 
@@ -28,7 +29,7 @@ inline double binaryEntropy(int p1, int total)
     return - p * log2(p) - (1 - p) * log2(1 - p);
 }
 
-inline double calculateLoss(const vector<int> IDs, const vector<double> &labels)
+inline double calculateLoss(const vector<int> IDs, const vector<int> &labels)
 {
     if (TASK_TYPE == CLASSIFICATION) {
         // entropy
@@ -68,13 +69,15 @@ inline double calculateLoss(const vector<int> IDs, const vector<double> &labels)
 struct TreeNode {
     bool leaf;
     int level, feature;
-    double value, result;
+    double value; //, result;
+    vector<double> result;
     int left, right;
 
     TreeNode() {
         leaf = false;
         level = feature = left = right = -1;
-        value = result = 0;
+        // value = result = 0;
+        value = 0;
     }
 };
 
@@ -102,7 +105,7 @@ public:
 
     DecisionTree() {}
 
-    void train(const vector< vector<double> > &features, const vector<double> &results, int minNodeSize, int maxLevel = 18, vector<string> featureNames = vector<string>()) {
+    void train(const vector< vector<double> > &features, const vector<int> &results, int minNodeSize, int maxLevel = 18, int num_class = 2, vector<string> featureNames = vector<string>()) {
         int threadID = omp_get_thread_num();
         if (features.size() == 0) {
             return;
@@ -135,25 +138,33 @@ public:
         nodes.push_back(root);
 
         // bootstrapping
-        vector<int> index[3];
+        
+        vector<vector<int> > index(num_class, vector<int>());
         for (int i = 0; i < (int)results.size(); ++ i) {
-            index[(int)results[i]].push_back(i);
+            index[results[i]].push_back(i);
+        }
+
+        vector<int> selected_size;
+        for (const auto& t : index) {
+            selected_size.push_back(t.size());
         }
         vector<int> rootBag;
-        for (int type = 0; type < 3; ++ type) {
-            int selected = (int)(min(min(index[0].size(), index[1].size()), index[2].size())) * 16;
+        
+        for (int type = 0; type < num_class; ++ type) {
+            int selected = min(K_OUT_OF_N, (int)(*min_element(selected_size.begin(), selected_size.end())) * 4);
             for (int i = 0; i < selected; ++ i) {
                 int id = index[type][rng[threadID].next(index[type].size())];
                 rootBag.push_back(id);
             }
         }
 
-
-        /*vector<int> rootBag;
+        /*
+        vector<int> rootBag;
         int samplesN = max((int)results.size(), 100);
         for (int i = 0; i < samplesN; ++ i) {
             rootBag.push_back(rng[threadID].next(results.size()));
-        }*/
+        }
+        */
 
         vector<vector<int>> nodeBags;
         nodeBags.push_back(rootBag);
@@ -161,11 +172,14 @@ public:
         for (int curNode = 0; curNode < (int)nodes.size(); ++ curNode) {
             TreeNode &node = nodes[curNode];
             vector<int> &bag = nodeBags[curNode];
+            for (int i = 0; i < num_class; ++i) {
+                node.result.push_back(0);
+            }
 
             if (bag.size() == 0) {
                 // a null tree
                 node.leaf = true;
-                node.result = 0;
+                // node.result = 0;
                 continue;
             }
 
@@ -186,9 +200,13 @@ public:
                 // leaf
                 node.leaf = true;
                 for (int i = 0; i < (int)bag.size(); ++ i) {
-                    node.result += results[bag[i]];
+                    //previously results[x] {0,1}
+                    node.result[results[bag[i]]] ++;
                 }
-                node.result /= bag.size();
+                for (int i = 0; i < node.result.size(); ++ i) {
+                    node.result[i] /= bag.size();
+                }
+                // node.result /= bag.size();
                 continue;
             }
 
@@ -236,9 +254,11 @@ public:
                 // leaf
                 node.leaf = true;
                 for (int i = 0; i < (int)bag.size(); ++ i) {
-                    node.result += results[bag[i]];
+                    node.result[results[bag[i]]] ++;
                 }
-                node.result /= bag.size();
+                for (int i = 0; i < node.result.size(); ++ i) {
+                    node.result[i] /= bag.size();
+                }
                 continue;
             }
 
@@ -269,7 +289,7 @@ public:
         nodes.shrink_to_fit();
     }
 
-    double estimate(vector<double> &features) {
+    vector<double> estimate(vector<double> &features) {
         TreeNode *current = &nodes[0];
         while (!current->leaf) {
             if (features[current->feature] < current->value) {
@@ -286,7 +306,8 @@ class RandomForest
 {
     vector<DecisionTree> trees;
     vector< vector<double> > features;
-    vector<double> results;
+    vector<int> results;
+    int num_class;
 public:
     void dump(string filename) {
         FILE* out = fopen(filename.c_str(), "wb");
@@ -315,10 +336,11 @@ public:
         trees.clear();
     }
 
-    void train(vector< vector<double> > &_features, vector<double> _results, int treesNo = 100, int minNodeSize = 100, int maxLevel = 100, vector<string> featureNames = vector<string>()) {
+    void train(vector< vector<double> > &_features, vector<int> _results, int treesNo = 100, int minNodeSize = 100, int maxLevel = 100, int _num_class = 2, vector<string> featureNames = vector<string>()) {
         if (features.size() == 0) {
             features = _features;
             results = _results;
+            num_class = _num_class;
             if (features.size() > 0) {
                 featureImportance.clear();
                 featureImportance.resize(features[0].size(), 0);
@@ -329,21 +351,34 @@ public:
         
         #pragma omp parallel for
         for (int i = 0; i < treesNo; ++ i) {
-            trees[i].train(_features, _results, minNodeSize, maxLevel, featureNames);
+            trees[i].train(_features, _results, minNodeSize, maxLevel, num_class, featureNames);
         }
     }
 
-    double estimate(vector<double> &features) {
+    pair<int, double> estimate(vector<double> &features) {
         if (trees.size() == 0) {
-            return 0.0;
+            return make_pair(0, 1.0);
         }
 
-        double sum = 0;
-        # pragma omp parallel for reduction (+:sum)
+        vector<double> sum(num_class, 0);
+        // double sum = 0;
+        # pragma omp parallel for reduction (vec_double_plus : sum)
         for (int i = 0; i < (int)trees.size(); ++ i) {
-            sum += trees[i].estimate(features);
+            vector<double> tmp = trees[i].estimate(features);
+            // cerr << tmp.size() << "\t" << sum.size() << endl;
+            assert(tmp.size() == sum.size());
+            for (int j = 0; j < sum.size(); ++ j) {
+                sum[j] += tmp[j];
+            }
         }
-        return sum / trees.size();
+
+        for (int i = 0; i < sum.size(); ++ i) {
+            sum[i] /= trees.size();
+        }
+
+        int prediction = std::distance(sum.begin(), std::max_element(sum.begin(), sum.end()));
+
+        return make_pair(prediction, sum[prediction]);
     }
 };
 };
