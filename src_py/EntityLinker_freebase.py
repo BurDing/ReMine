@@ -200,8 +200,9 @@ def findFBTypes(outDir, outFile):
         if dbID in dbIdToFbId and dbIdToFbId[dbID] in fbIdToFbType:
             fbID = dbIdToFbId[dbID]
             types = ', '.join(fbIdToFbType[fbID])
-            g.write(did + '\t' + surfaceForm + '\t' + fbID + '\t' + types
-     + '\t' + similarityScore + '\t' + rank + '\n')
+            if (rank_score) < 0.1:
+                g.write(did + '\t' + surfaceForm + '\t' + fbID + '\t' + types
+         + '\t' + similarityScore + '\t' + rank + '\n')
         #except:
         #    err_count += 1
 
