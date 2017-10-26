@@ -164,7 +164,7 @@ def entityLinker(file_path,seed_path,out_path=None):
 	with open(seed_path,'r') as seed:
 		for line in seed:
 			tmp=line.strip().split('\t')
-			if float(tmp[4]) > 0.8:
+			if float(tmp[4]) > 0.8 and float(tmp[5]) < 0.001:
 				seeds[int(tmp[0])].append(tmp[1])
 			#break
 		#print seeds
@@ -335,6 +335,49 @@ def addIndex(file_path, output):
 				tmp[idx] = str(idx) + '_' + i
 			OUT.write(' '.join(tmp) + '\n')
 
+def replaceLemma(in1, in2, out):
+	wrong_lemma = set(['he', 'she', 'you'])
+	with open(in1) as a, open(in2) as b, open(out, 'w') as c:
+		for line_a, line_b in zip(a,b):
+			tmp_a = line_a.strip().split(' ')
+			tmp_b = line_b.strip().split(' ')
+			tmp_c = []
+			assert(len(tmp_a) == len(tmp_b))
+			for w_a,w_b in zip(tmp_a,tmp_b):
+				if w_a in wrong_lemma:
+					tmp_c.append(w_b)
+				else:
+					tmp_c.append(w_a)
+			c.write(' '.join(tmp_c) + '\n')
+
+def compare(in1, in2):
+	with open(in1) as a, open(in2) as b:
+		sum_a = 0
+		sum_b = 0
+		sum_correct = 0
+		#stopwords = ['the', 'and', 'of', 'at', 'in']
+		stopwords = []
+		for line_a,line_b in zip(a,b):
+			tmp_a = json.loads(line_a)['entityMentions']
+			tmp_b = json.loads(line_b)['entityMentions']
+			pred_a = set(map(lambda x: x['text'], tmp_a))
+			pred_b = set()
+			for item in tmp_b:
+				ttt = item[2].strip().split(' ')
+				for idx, d in enumerate(ttt):
+					if d in stopwords:
+						del ttt[idx]
+				pred_b.add(' '.join(ttt))
+			print(pred_a, pred_b)
+			sum_a += len(pred_a)
+			sum_b += len(pred_b)
+			sum_correct += len(pred_a&pred_b)
+		print(sum_a,sum_b,sum_correct)
+
+
+
+
+
 if __name__ == '__main__':
 	#TODO(branzhu): add comments for following methods
 
@@ -355,7 +398,11 @@ if __name__ == '__main__':
 	#playRelations(sys.argv[1])
 	#removeDups(sys.argv[1], sys.argv[2])
 	#convertTest(sys.argv[1], sys.argv[2])
-	addIndex(sys.argv[1], sys.argv[2])
+	#addIndex(sys.argv[1], sys.argv[2])
+	
+	#replaceLemma(sys.argv[1], sys.argv[2], sys.argv[3])
+	compare(sys.argv[1], sys.argv[2])
+	
 	#flatData(sys.argv[1], sys.argv[2])
 
 	#entityLinker2(sys.argv[1],sys.argv[2],sys.argv[3])
