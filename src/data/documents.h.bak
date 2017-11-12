@@ -345,18 +345,13 @@ namespace Documents
             while (getLine(in)) {
                 // line[strcspn(line, "\n")] = '\0';
                 int words_cnt = 0;
-		stringstream sin(line);
-		for (string temp; sin >> temp;) {
-                	bool flag = true;
-                	TOKEN_ID_TYPE token = 0;
-                	for (int i = 0; i < temp.size() && flag; ++ i) {
-                    		flag &= isdigit(temp[i]);
-                    		token = token * 10 + temp[i] - '0';
-                	}
-			if (flag) {
-                    		words_cnt += 1;
-                	}
-		}
+                for (int i = 0; i < strlen(line); ++i) {
+                    if (line[i] == ' ') words_cnt += 1;
+                }
+                string tmp = string(1, line[strlen(line) - 1]);
+                if (!separatePunc.count(tmp)) {
+                    words_cnt += 1;
+                }
                 sentences.push_back(make_pair(st, st + words_cnt - 1));
                 st += words_cnt;
             }

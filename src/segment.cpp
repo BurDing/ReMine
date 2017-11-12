@@ -38,11 +38,14 @@ void process(const vector<TOTAL_TOKENS_TYPE>& tokens, const vector<pair<TOTAL_TO
             }
             u = trie[u].children[tokens[k]];
         }
+        
+        
         quality &= trie[u].id >= 0 && (
                     patterns[trie[u].id].size() > 1 && patterns[trie[u].id].indicator == "BP" && patterns[trie[u].id].quality >= SEGMENT_MULTI_WORD_QUALITY_THRESHOLD ||
                     patterns[trie[u].id].size() > 1 && patterns[trie[u].id].indicator != "BP" && patterns[trie[u].id].quality >= SEGMENT_MULTI_PHRASE_QUALITY_THRESHOLD ||
                     patterns[trie[u].id].size() == 1 && patterns[trie[u].id].quality >= SEGMENT_SINGLE_WORD_QUALITY_THRESHOLD
                    );
+                   
 
         if (quality) {
             //if (RELATION_MODE && patterns[i].indicator == "RELATION" || !RELATION_MODE && patterns[i].indicator == "ENTITY")
@@ -102,7 +105,8 @@ int main(int argc, char* argv[])
 
     //return 0;
 
-    sort(patterns.begin(), patterns.end(), byQuality);
+    //sort(patterns.begin(), patterns.end(), byQuality);
+
     int unigram_cnt=0,multigram_cnt=0;
     for (int i=0;i<patterns.size();++i){
         if (patterns[i].quality <= 0)
@@ -193,7 +197,7 @@ int main(int argc, char* argv[])
         }
     }
     fclose(in);
-    if (ENABLE_POS_TAGGING) {
+    if (false) {
         for (const auto& m : Segmentation::tree_map) {
             cerr << m.first << " " << Segmentation::deps_prob[m.second] <<endl;
         }

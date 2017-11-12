@@ -43,9 +43,10 @@ int main(int argc, char* argv[])
                         // "all_capitalized",
                         "stopwords_1st", "stopwords_last", "stopwords_ratio", "avg_idf",
                         "complete_sub", "complete_super",
-                        "CC", "CD", "DT", "IN", "ADJ", "NP",
-                        "PP", "ADV", "VB", "WH", "NA",
+                        "CC", "CD", "DT", "IN", "PRP$", "ADJ", "NP",
+                        "PRP", "ADV", "VB", "WH", "NA",
                         };
+
     vector<vector<double>> featuresPhrase = Dump::loadFeatures("tmp_remine/phrase.feat", featureNamesPhrase);
     // vector<vector<double>> featuresPhrase = Features::extract(featureNamesPhrase);
 
@@ -54,13 +55,13 @@ int main(int argc, char* argv[])
     vector<string> featureNamesUnigram = {"log_frequency", "independent_ratio",
                         "stopwords", "idf",
                         "punc_quote", "punc_parenthesis", "first_capitalized", "all_capitalized",
-                        "complete_super", "extrabit_noun", "extrabit_verb"
+                        "complete_super", "extrabit_noun", "extrabit_verb", "extrabit_prp"
                         };
     vector<vector<double>> featuresUnigram = Dump::loadFeaturesUnigram("tmp_remine/unigram.feat", featureNamesUnigram);
     // vector<vector<double>> featuresUnigram = Features::extractUnigram(featureNamesUnigram);
  	
  	cerr << "=== Generate Phrase Labels ===" << endl;
- 	vector<Pattern> phrase_truth = Label::generateAll(LABEL_METHOD, LABEL_FILE, RM_QUALITY_FILE, RM_NEGATIVES_FILE);
+ 	// vector<Pattern> phrase_truth = Label::generateAll(LABEL_METHOD, LABEL_FILE, RM_QUALITY_FILE, RM_NEGATIVES_FILE);
 
  	// This one is required!
  	// Use the same tokenization mapping.
@@ -73,8 +74,8 @@ int main(int argc, char* argv[])
     }
     
 
-    predictQuality(patterns, featuresPhrase, featureNamesPhrase);
-    predictQualityUnigram(patterns, featuresUnigram, featureNamesUnigram);
+    // predictQuality(patterns, featuresPhrase, featureNamesPhrase);
+    // predictQualityUnigram(patterns, featuresUnigram, featureNamesUnigram);
 
  	constructTrie();
 

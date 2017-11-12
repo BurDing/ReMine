@@ -138,6 +138,13 @@ void predictQualityUnigram(vector<Pattern> &patterns, vector<vector<double>> &fe
             else if (prediction.first == 2) {
                 patterns[i].indicator = "RP";
             }
+
+            if (patterns[i].postags.size() == 1) {
+                if (Documents::posid2Tag[patterns[i].postags[0]] == "PRP") {
+                    patterns[i].quality = 1.0;
+                    patterns[i].indicator = "EP";
+                }
+            }
         }
     }
     fprintf(stderr, "[Unigram] Prediction done.\n");

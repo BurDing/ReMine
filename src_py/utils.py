@@ -1,7 +1,8 @@
 import json
 import sys
 from collections import defaultdict
-import _pickle as cPickle
+#import _pickle as cPickle
+import cPickle
 import operator
 import re
 
@@ -363,11 +364,16 @@ def compare(in1, in2):
 			pred_a = set(map(lambda x: x['text'], tmp_a))
 			pred_b = set()
 			for item in tmp_b:
+				'''
 				ttt = item[2].strip().split(' ')
 				for idx, d in enumerate(ttt):
 					if d in stopwords:
 						del ttt[idx]
-				pred_b.add(' '.join(ttt))
+				'''
+				#if item[2] != 'Mr.' and item[2] != 'Mrs.' and item[2] != 'Ms.':
+				#	pred_b.add(item[2])
+				#if len(item[2].split(' ')):
+				pred_b.add(item[2])
 			print(pred_a, pred_b)
 			sum_a += len(pred_a)
 			sum_b += len(pred_b)
@@ -375,6 +381,20 @@ def compare(in1, in2):
 		print(sum_a,sum_b,sum_correct)
 
 
+def abalations(in1, in2):
+	cnt = 0
+	_sum = 0
+	with open(in1) as a, open(in2) as b:
+		for line_a,line_b in zip(a,b):
+			scores = line_a.strip().split('\t')
+			if len(scores[3].split('_')) > 4:
+				scores[1] = str(float(scores[1])+3)
+				print('\t'.join(scores))
+				_sum += 1
+				cnt += int(line_b.strip())
+			else:
+				print(line_a.strip())
+	#print(float(cnt)/_sum)
 
 
 
@@ -398,10 +418,12 @@ if __name__ == '__main__':
 	#playRelations(sys.argv[1])
 	#removeDups(sys.argv[1], sys.argv[2])
 	#convertTest(sys.argv[1], sys.argv[2])
-	#addIndex(sys.argv[1], sys.argv[2])
+	addIndex(sys.argv[1], sys.argv[2])
 	
 	#replaceLemma(sys.argv[1], sys.argv[2], sys.argv[3])
-	compare(sys.argv[1], sys.argv[2])
+	#compare(sys.argv[1], sys.argv[2])
+	
+	#abalations(sys.argv[1], sys.argv[2])
 	
 	#flatData(sys.argv[1], sys.argv[2])
 

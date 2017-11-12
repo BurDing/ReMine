@@ -30,4 +30,11 @@ if __name__ == '__main__':
 	elif args.op == 'entityLinker':
 		utils.entityLinker(args.in1, args.in2, args.out)
 
-
+	elif args.op == 'exe':
+		tmp_out = 'tmp/train_annotated.json'
+		tmp_ent = 'tmp/nyt.entities'
+		tmp_rm = 'tmp/nyt.relations'
+		utils.entityLinker(args.in1, args.in2, tmp_out)
+		utils.getEntity(tmp_out, tmp_ent, args.opt)
+		utils.relationLinker(tmp_out, 'pickle')
+		utils.dumpRelations('pickle', tmp_rm, False)

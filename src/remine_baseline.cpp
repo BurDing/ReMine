@@ -9,6 +9,8 @@ Usage:
 
 int MIN_DIS = 0;
 set<string> verb_tags = {"VB", "VBD", "VBG", "VBN", "VBP", "VBZ"};
+set<string> noun_tags = {"NN", "NNS", "NNP", "NNPS"};
+set<string> attach_tags = {"IN", "TO", "RP"};
 void split(const string &s, char delim, vector<string>& result) {
     stringstream ss;
     ss.str(s);
@@ -18,16 +20,35 @@ void split(const string &s, char delim, vector<string>& result) {
     }
 }
 
-void printSubtree(const vector<vector<int>>& parent, const vector<string> tags, set<int>& bgs, int index, int left, int right) {
+void printSubtree(const vector<vector<int>>& parent, const vector<string> tags, set<int>& bgs, int index, int left, int right, bool special = false) {
     // cerr << index << " inserted !" << endl;
     // if (verb_tags.count(tags[index - 1])) {
-    if (index <= right && index > left) {
+    // if (index <= right && index >= left) {
+    
+    if (special || !noun_tags.count(tags[index - 1])) {
+        for (int i = 0; i < parent[index].size(); ++i) {
+            printSubtree(parent, tags, bgs, parent[index][i], left, right, special);
+        }
+    }
+    
+
+        //bgs.insert(parent[index][i]);
+    
+    if (!special && !noun_tags.count(tags[index - 1])) {
+        bgs.insert(index);
+    }
+    if (special && attach_tags.count(tags[index - 1]))
+        bgs.insert(index);
+    // bgs.insert(index)
+    
+    /*if (index <= right && index > left) {
         for (int i = 0; i < parent[index].size(); ++i) {
             printSubtree(parent, tags, bgs, parent[index][i], left, right);
         }
             //bgs.insert(parent[index][i]);
         bgs.insert(index);
-    }
+    }*/
+    //}
 
     
 }
@@ -52,22 +73,21 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<s
             if (multi_root > deps.size()) return;
     	}	
     }
+    
+    /*
+    for(int i = 0; i < parents.size(); ++i) {
+        cerr << i << "->\t";
+        for (int j = 0; j < parents[i].size(); ++j) {
+            cerr << parents[i][j] << " ";
+        }
+        cerr << endl;
+
+    }
+    */
 
     for (auto& item : children) {
     	reverse(item.begin(), item.end());
     }
-    
-    /*
-    for (int i = 0; i < children.size(); ++i) {
-    	 cout << "node : " << i << " ";
-    	for (const auto& t : children[i])
-    		cout << t << " ";
-        cout << "childrens: ";
-        for (const auto& t : parents[i])
-            cout << t << " ";
-    	cout << endl;
-    }
-    */
     
     vector<vector<int>> out_nodes(entityMentions.size());
     vector<vector<string>> out_types(entityMentions.size());
@@ -91,13 +111,14 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<s
     }
 
     // Shortest path version
-    for (int j = 1; j < entityMentions.size(); ++j) {
+    for (int j = 0; j < entityMentions.size(); ++j) {
         int distance = deps.size();
-        int min_i = 0;
+        int min_i = -1;
         int min_start = 0, min_end = 0, min_parent = 0;
         string start_type, end_type;
         set<int> bgs;
-        for (int i = 0; i < j; ++i) {
+        for (int i = 0; i < entityMentions.size(); ++i) {
+            if (i == j) continue;
             // Fix multi-out_nodes problem in this version
             for(int start_index = 0; start_index < out_nodes[i].size(); ++ start_index)
                 for (int end_index = 0; end_index < out_nodes[j].size(); ++ end_index) {
@@ -117,9 +138,13 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<s
                             break;
                         }
                     }
+                    int path_length = children[end].size() + children[start].size() + 2 - 2 * parent;
+                    if (path_length <= distance) {
+                        if (path_length == distance && out_types[i][start_index].find("nsubj") == string::npos && abs(i - j) >= abs(min_i - j) ) {
+                            break;
+                        }
 
-                    if (children[end].size() + children[start].size() + 2 - 2 * parent <= distance) {
-                        distance = children[end].size() + children[start].size() + 2 - 2 * parent;
+                        distance = path_length;
                         min_start = start;
                         min_end = end;
                         min_parent = parent;
@@ -148,7 +173,13 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<s
             printSubtree(parents, tags, bgs, min_end, entityMentions[min_i].second, entityMentions[j].first);
         }
         
-        /*
+        
+        for (int i = entityMentions[j].first; i < entityMentions[j].second; ++i) {
+            printSubtree(parents, tags, bgs, i+1, entityMentions[min_i].second, entityMentions[j].first, true);
+        }
+        
+
+        
         vector<int> erased;
 
         for (const auto& path : bgs) {
@@ -159,7 +190,6 @@ void process(const vector<int>& deps, const vector<string>& tags, const vector<s
         for (const auto& path : erased) {
             bgs.erase(path);
         }
-        */
 
         // fprintf(out, "%d_%s %d_%s\t", min_i, start_type.c_str(), j, end_type.c_str());
         fprintf(out, "%d %d\t", min_i, j);
@@ -297,6 +327,7 @@ int main(int argc, char* argv[])
     cout << "dependencies readed" << endl;
 	while (getLine(emIn)) {
         // cerr << docs << "DOC" << endl;
+        //if (docs == 235973) {
 		stringstream sin(line);
 		vector<pair<int ,int>> ems;
 		for(string temp; sin >> temp;) {
@@ -307,6 +338,7 @@ int main(int argc, char* argv[])
 		}
         process(depPaths[docs], posPaths[docs], depTypes[docs], ems, out);
         fprintf(out, "\n");
+        //}
         ++ docs;
         // break;
         //if (docs == 5)

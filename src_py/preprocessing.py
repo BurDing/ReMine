@@ -30,10 +30,19 @@ class PreProcessor(object):
 		return str(self.word_mapping[word])
 
 	def chunk_train(self, docIn, posIn):
+
+		grammar = r"""
+  			NP: {<DT|PP\$>?<JJ>*<NN|NNS>+}   # chunk determiner/possessive, adjectives and noun
+      		{<NNP>+} 
+      		{<NNP>+<CD>+}               # chunk sequences of proper nouns
+		"""
+
+		'''
 		grammar = r"""
   			NP: {<DT|PP\$>?<JJ>*<NN>+}   # chunk determiner/possessive, adjectives and noun
       		{<NNP>+}                # chunk sequences of proper nouns
 		"""
+		'''
 		cp = nltk.RegexpParser(grammar)
 		cnt = 0
 		with open(docIn) as doc, open(posIn) as pos, open('tmp_remine/boost_patterns.txt', 'w') as out:
@@ -208,9 +217,12 @@ class PreProcessor(object):
 		queue=[]
 		r_ptr=0
 		c_ptr=0
-		start=['<None>','<ENTITY>','<RELATION>']
-		end=['</None>','</ENTITY>','</RELATION>']
-		dictx={'<ENTITY>':'[','<RELATION>':'(','</RELATION>':')','</ENTITY>':']'}
+		#start=['<None>','<ENTITY>','<RELATION>']
+		#end=['</None>','</ENTITY>','</RELATION>']
+
+		start=['<None>','<EP>','<RP>','<BP>']
+		end=['</None>','</EP>','</RP>', '</BP>']
+		dictx={'<EP>':'<phrase> ','<RELATION>':'(','</EP>':'</phrase> ','</ENTITY>':']'}
 		with open(seg_path,'r') as _seg, open(outpath,'w') as OUT:
 			for line in _seg:
 				for token in line.strip().split(' '):

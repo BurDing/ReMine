@@ -46,16 +46,29 @@ void constructTrie() {
         if (tokens.size() == 0 || tokens.size() > 1 && patterns[i].currentFreq == 0) {
             continue;
         }
+        bool quality = true;
+        
+        /*
+        quality &= ( //patterns[i].indicator == "EP"
+                    // patterns[trie[u].id].size() > 1 && patterns[trie[u].id].indicator == "BP" && patterns[trie[u].id].quality >= SEGMENT_MULTI_WORD_QUALITY_THRESHOLD ||
+                    patterns[i].size() > 1 && patterns[i].indicator == "BP" && patterns[i].quality >= SEGMENT_MULTI_WORD_QUALITY_THRESHOLD  ||
+                    patterns[i].size() > 1 && patterns[i].indicator != "BP" && patterns[i].quality >= SEGMENT_MULTI_PHRASE_QUALITY_THRESHOLD  ||
+                    patterns[i].size() == 1 && patterns[i].quality >= SEGMENT_SINGLE_WORD_QUALITY_THRESHOLD
+        );
+        */
+        
         size_t u = 0;
-        for (const TOTAL_TOKENS_TYPE& token : tokens) {
-            if (!trie[u].children.count(token)) {
-                trie[u].children[token] = trie.size();
-                trie.push_back(TrieNode());
+        if (quality) {
+            for (const TOTAL_TOKENS_TYPE& token : tokens) {
+                if (!trie[u].children.count(token)) {
+                    trie[u].children[token] = trie.size();
+                    trie.push_back(TrieNode());
+                }
+                u = trie[u].children[token];
             }
-            u = trie[u].children[token];
+            trie[u].id = i;
+            trie[u].indicator = patterns[i].indicator;
         }
-        trie[u].id = i;
-        trie[u].indicator = patterns[i].indicator;
         //cerr<<patterns[i].postagquality<<endl;
     }
     cerr << "# of trie nodes = " << trie.size() << endl;
@@ -333,7 +346,14 @@ public:
                 return -INF;
         }
         */
+        for (int i = start; i <= end; ++ i) {
+            if (Documents::isPunc(tokens[i])) return -INF;
+        }
+        return 0;
+
+
         map<string, string> puncMap {{"-lrb-", "-rrb-"}, {"``", "\'\'"}, {"\'\'", "\'\'"}, {"\"", "\""}};
+        set<string> noun_tags = {"NN", "NNS", "NNP", "NNPS"};
         if (Documents::punctuations.count(tokens[start])) {
             if (!Documents::punctuations.count(tokens[end])) return -INF;
             if (!puncMap.count(Documents::punctuations[tokens[start]]) || !puncMap.count(Documents::punctuations[tokens[end]])) {
@@ -353,12 +373,11 @@ public:
                 return -INF;
             }
             one_punc = true;
-            /*
+            
             if (!Documents::isPunc(tokens[i-1]) && !Documents::isPunc(tokens[i+1])) {
-                if (tags[i-1] < connect.size() && tags[i+1] < connect.size())
-                    PCost += log(connect[tags[i-1]][tags[i+1]] + EPS);
+                if (!noun_tags.count(posid2Tag[tags[i-1]]) || !noun_tags.count(posid2Tag[tags[i+1]]))
+                    return -INF;
             }
-            */
           }   
         }
         return PCost;
@@ -594,53 +613,55 @@ public:
                 }
                 u = trie[u].children[tokens[j]];
                 if (trie[u].id != -1) {
-                    impossible = false;
-                    PATTERN_ID_TYPE id = trie[u].id;
-                    double p = cost + prob[id];
-                    // double depCost = istree(deps, i, j) ? 0 : -INF;
-                    double multiConstraints = 0.0;
-                    
-                    // TODO(branzhu): incorporate 
-                    // if (Documents::isPunc(tokens[i]) && !Documents::isPunc(tokens[j])) continue;
-                    // if (!Documents::isPunc(tokens[i]) && Documents::isPunc(tokens[j])) continue;
-                    
-                    
-                    if (j > i) {
-                        int index = GetSubtreeID(deps, i, j+1);
-                        multiConstraints += deps_prob[index];
-                    }
-                    
-                    
+                    // if (patterns[id].size() > 1 && patterns[i].indicator == "EP" && patterns[id].quality >= SEGMENT_MULTI_PHRASE_QUALITY_THRESHOLD  ||
+                    // patterns[id].size() == 1 && patterns[i].indicator == "EP" && patterns[id].quality >= SEGMENT_SINGLE_WORD_QUALITY_THRESHOLD) {
+                        impossible = false;
+                        PATTERN_ID_TYPE id = trie[u].id;
+                        double p = cost + prob[id];
+                        // double depCost = istree(deps, i, j) ? 0 : -INF;
+                        double multiConstraints = 0.0;
+                        
+                        
+                        
+                        if (j > i) {
+                            int index = GetSubtreeID(deps, i, j+1);
+                            multiConstraints += deps_prob[index];
+                        }
+                        
 
-                    // TODO(branzhu): add punc cost 
-                    
-                    
-                    if (j > i) {
-                        multiConstraints += GetPuncCost(tokens, tags, i, j);
-                    }
-                    
+                        // TODO(branzhu): add punc cost 
+                        
+                        
+                        if (j > i) {
+                            multiConstraints += GetPuncCost(tokens, tags, i, j);
+                        }
+                        
+                        
 
-                    // double tagCost = (j + 1 < tokens.size() && tags[j] >= 0 && tags[j + 1] >= 0) ? disconnect[tags[j]][tags[j + 1]] : 0;
-                    
-                    
-                    if (f[i] + p + multiConstraints > f[j + 1]) {
-                        f[j + 1] = f[i] + p + multiConstraints;
-                        pre[j + 1] = i;
-                    }
-                    
-                    
-                    /*
-                    if (f[i] + p  > f[j + 1]) {
-                        f[j + 1] = f[i] + p;
-                        pre[j + 1] = i;
-                    }
-                    */
-                    
+                        // double tagCost = (j + 1 < tokens.size() && tags[j] >= 0 && tags[j + 1] >= 0) ? disconnect[tags[j]][tags[j + 1]] : 0;
+                        
+                        
+                        if (f[i] + p + multiConstraints > f[j + 1]) {
+                            f[j + 1] = f[i] + p + multiConstraints;
+                            pre[j + 1] = i;
+                        }
+                        
+                        
+                        /*
+                        if (f[i] + p  > f[j + 1]) {
+                            // cerr << "update at " << i << j << endl;
+                            f[j + 1] = f[i] + p;
+                            pre[j + 1] = i;
+
+                            // cerr << pre[2] << endl;
+                        }*/
+                    //}
 
                 }
             }
             if (impossible) {
                 if (f[i] > f[i + 1]) {
+                    // cerr << "at" << i << f[1] << "\t" << f[2] << endl;
                     f[i + 1] = f[i];
                     pre[i + 1] = i;
                 }

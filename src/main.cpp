@@ -35,7 +35,10 @@ int main(int argc, char* argv[])
     // return -1;
     cerr << "Mining frequent phrases..." << endl;
     FrequentPatternMining::mine(MIN_SUP, MAX_LEN);
+    
     FrequentPatternMining::loadExternalPatterns(EXTERNAL_PATTERNS, MAX_LEN);
+
+
     // check the patterns
     if (INTERMEDIATE) {
         vector<pair<int, int>> order;

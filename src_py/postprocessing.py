@@ -1,6 +1,7 @@
 import sys
 import argparse,json,operator
 import numpy as np
+from collections import defaultdict
 
 class PostProcessor(object):
 	def load_em_emb(self, em_emb_path):
@@ -36,12 +37,12 @@ class PostProcessor(object):
 					for i in candidates:
 						OUT.write(i[0].strip()+'\t'+str(i[1])+'\n')
 					candidates = []
-				
-				em1 = self.em_emb[tmp[0]]
-				em2 = self.em_emb[tmp[1]]
-				rms = tmp[2].strip().split(',')
-				#if int(tmp[3]) > 
 				try:
+					em1 = self.em_emb[tmp[0]]
+					em2 = self.em_emb[tmp[1]]
+					rms = tmp[2].strip().split(',')
+				#if int(tmp[3]) > 
+				
 					rm = self.rm_emb[rms[0]]
 					for r in rms[1:]:
 						rm += self.rm_emb[r]
@@ -49,7 +50,7 @@ class PostProcessor(object):
 					candidates.append((line, np.linalg.norm(em1+rm-em2, ord=1)))
 				except:
 					print(line_num)
-					print(rms)
+					#print(rms)
 				#if line_num > 30:
 				#	break
 	def generate_output(self, rank_out, train_json, out):
@@ -62,13 +63,19 @@ class PostProcessor(object):
 				score = tmp[1]
 				tmp = tmp[0].split(' ')
 				docID = tmp[3]
+				if int(docID) < 761106:
+					continue
+				else:
+					docID = str(int(docID) - 761105)
 				tmp_json = json.loads(lines[int(tmp[4])])
 				predicates = '_'.join(tmp_json['tokens'])
-				for rp in tmp[2].strip().split(','):
-					predicates = predicates.replace(rp, '['+rp+']')
 				
-				OUT.write(docID + '\t' + score + '\t' + tmp_json['entityMentions'][0][2] + '\t' + predicates
-					+ '\t' + tmp_json['entityMentions'][1][2]+'\n')
+				#for rp in tmp[2].strip().split(','):
+				#	predicates = predicates.replace(rp, '['+rp+']')
+				predicates = predicates.replace('_and','')
+				
+				OUT.write(docID + '\t' + score + '\t' + tmp_json['entityMentions'][0][2] + '\t"' + predicates
+					+ '"\t' + tmp_json['entityMentions'][1][2]+'\n')
 
 			
 	def compareLineByLine(self, test_file_a, test_file_b, out):
@@ -97,7 +104,9 @@ class PostProcessor(object):
 		with open(test_file,'r') as IN, open(json_file, 'r') as IN_JSON, open(pos_file, 'r') as IN_POS, open(output,'w') as OUT:
 			e_not_found = 0
 			r_not_found = 0
+			cnt = 0
 			for line, json_line, pos_line in zip(IN, IN_JSON, IN_POS):
+				cnt += 1
 				pred=[]
 				pred_rm = []
 				for item in line.split(']_['):
@@ -107,6 +116,7 @@ class PostProcessor(object):
 						pred.append(item.rstrip(' :BP').strip().replace('(','-lrb-').replace(')','-rrb-'))
 				tmp = {}
 				tmp['tokens'] = json_line.strip().split(' ')
+				#tmp['lemmas'] = 
 				tmp['pos'] = pos_line.strip().split(' ')
 				#exists = set()
 				cur_max = dict()
@@ -125,6 +135,7 @@ class PostProcessor(object):
 					#if found and (ptr, ptr+window_size) not in exists:
 					if not found:
 						ptr = 0 
+						#print(e+"not found")
 						e_not_found += 1
 					if found:
 						if ptr+window_size not in cur_max:
@@ -142,6 +153,53 @@ class PostProcessor(object):
 					
 				#tmp['entityMentions'] = list(exists)
 				tmp['entityMentions'].sort(key=operator.itemgetter(1))
+				
+				
+				new = []
+				for i in range(len(tmp['entityMentions'])-1):
+					if tmp['entityMentions'][i][1] == tmp['entityMentions'][i+1][0] and (tmp['entityMentions'][i+1][2][0:2] == 'of' or tmp['entityMentions'][i][2][-2:] == 'of' or tmp['entityMentions'][i+1][2][0:2] == "'s" or tmp['entityMentions'][i][2][-2:] == "'s"):
+						postags = ''.join(tmp['pos'][tmp['entityMentions'][i][0]:tmp['entityMentions'][i+1][1]])
+						if 'NN' in postags or 'W' in postags:
+							new.append([tmp['entityMentions'][i][0], tmp['entityMentions'][i+1][1], tmp['entityMentions'][i][2] + ' ' + tmp['entityMentions'][i+1][2]])
+							#if cnt >= 235973:
+								#print(tmp['entityMentions'][i][2], tmp['entityMentions'][i+1][2])
+							#if tmp['']
+						#else:
+						#	print(tmp['entityMentions'][i][2] + ' ' + tmp['entityMentions'][i+1][2])
+						#print(new[-1][2])
+					elif len(new) == 0 or tmp['entityMentions'][i][0] >= new[-1][1]:
+						postags = ''.join(tmp['pos'][tmp['entityMentions'][i][0]:tmp['entityMentions'][i][1]])
+						if 'NN' in postags or 'W' in postags or 'PRP' in postags:
+							new.append(tmp['entityMentions'][i])
+						#else:
+						#	print(tmp['entityMentions'][i][2])
+				if len(new) == 0:
+					new = tmp['entityMentions']
+				elif new[-1][1] != tmp['entityMentions'][-1][1]:
+					new.append(tmp['entityMentions'][-1])
+
+				for idx,item in enumerate(new):
+					postags = tmp['pos'][item[0]:item[1]]
+					start = int(item[0])
+					end = int(item[1])
+					xxxx = item[2].strip().split(' ')
+					if postags[0] == 'IN' or postags[0] == 'CC' or postags[0] == 'TO':
+						del xxxx[0]
+						start += 1
+					if len(xxxx) > 0:
+						if postags[-1] == 'IN' or postags[-1] == 'CC' or postags[-1] == 'TO':
+							del xxxx[-1]
+							end -= 1
+					if start != int(item[0]) or end != int(item[1]):
+						if start != end:
+							new[idx] = [start, end, ' '.join(xxxx)]
+							#print(item[2], ' '.join(xxxx))
+						else:
+							pass
+							#print("^^^^^^^"+item[2]+"^^^^^^^")
+				tmp['entityMentions'] = new
+
+
 				OUT.write(json.dumps(tmp) + '\n')
 			print("#entity not found:",e_not_found)
 
@@ -171,17 +229,36 @@ class PostProcessor(object):
 				tokens = tmp['tokens']
 				tags = tmp['pos']
 				entityMentions = tmp['entityMentions']
-				for item in line_seg.split('<>'):
+				for item in line_seg.strip().split('<>'):
 					dump = {}
-					annotation = item.split('\t')
+					if item == '':
+						continue
+					annotation = item.strip().split('\t')
 					#print annotation
-					if len(annotation) == 1 or len(annotation[1]) == 0:
-						continue
-					ranges = list(map(lambda x:int(x)-1, annotation[1].strip().split(' ')))
-					if len(ranges) == 1 and tokens[ranges[0]] in self.punc:
-						continue
+
 					idx1 = int(annotation[0].split(' ')[0])
 					idx2 = int(annotation[0].split(' ')[1])
+
+					if len(annotation) == 1 or len(annotation[1]) == 0:
+						'''
+						if cnt >= 761105:
+							em1 = entityMentions[idx1]
+							em2 = entityMentions[idx2]
+							if em2[0] - em1[1] <= 2 and em2[0] != em1[1]:
+								predicates = ' '.join(tokens[em1[1]:em2[0]])
+								if predicates == ',':
+									predicates = 'is (at, of)'
+								if 'be' in predicates or 'of' in predicates or 'in' in predicates or 'like' in predicates:
+									print(str(cnt-761105) + '\t0.0\t'+em1[2]+'\t' + predicates+'\t' +em2[2])
+						continue
+						'''
+						continue
+					ranges = list(map(lambda x:int(x)-1, annotation[1].strip().split(' ')))
+					
+					#there are still possibilities
+					if len(ranges) == 1 and tokens[ranges[0]] in self.punc:
+						continue
+					
 					#ranges = range(entityMentions[idx1][0],entityMentions[idx1][1]) +\
 					#ranges + range(entityMentions[idx2][0],entityMentions[idx2][1])
 					#ranges = map(lambda x:str(x[0])+'_'+x[1],sorted(list(ranges)))
@@ -192,6 +269,8 @@ class PostProcessor(object):
 					#dump['tokens'] = tokens[ranges[0]:ranges[-1]+1]
 					dump['doc'] = cnt
 					#dump['pos'] = tags[ranges[0]:ranges[-1]+1]
+					entityMentions[idx1].append(tags[entityMentions[idx1][0]:entityMentions[idx1][1]])
+					entityMentions[idx2].append(tags[entityMentions[idx2][0]:entityMentions[idx2][1]])
 					dump['entityMentions'] = [entityMentions[idx1], entityMentions[idx2]]
 					for i in ranges:
 						fout.write(str(deps[i]) + '\n')
@@ -205,8 +284,24 @@ class PostProcessor(object):
 					#OUT.write()
 				#print json.dumps(new_line)
 				#OUT.write(json.dumps(new_line) + '\n')
-			print(cnt)
+			#print(cnt)
 		fout.close()
+
+	def combine(self, file_a, file_b, file_out):
+		with open(file_a) as IN_A, open(file_b) as IN_B, open(file_out, 'w') as OUT:
+			extras = defaultdict(list)
+			for line in IN_B:
+				docID = line.strip().split('\t')[0]
+				extras[docID].append(line)
+			for line in IN_A:
+				docID = line.strip().split('\t')[0]
+				#print(extras[str(docID)])
+				#print(docID)
+				for s in extras[docID]:
+					OUT.write(s)
+				del extras[docID]
+				OUT.write(line)
+
 
 	def loadRMTest(self, test_file,json_file,output, out1,out2, out3):
 		self.punc = ['.',',','"',"'",'?',':',';','-','!','(',')','``',"''", '']
@@ -225,7 +320,8 @@ class PostProcessor(object):
 					#if ' ' in item.strip():
 							pred.append(item)
 				tmp_json = json.loads(json_line)
-				if 'VB' in ''.join(tmp_json['pos']) and len(pred) > 0:
+				pos_segs = ''.join(tmp_json['pos'])
+				if ('VB' in pos_segs or 'IN' in pos_segs):
 					tmp = tmp_json['entityMentions']
 					em_1 = tmp[0][2].lower().replace("''",'').replace(' ', '_')
 					em_2 = tmp[1][2].lower().replace("''",'').replace(' ', '_')
@@ -233,7 +329,12 @@ class PostProcessor(object):
 						continue
 					ems.add(em_1)
 					ems.add(em_2)
-					OUT.write(em_1 +' '+ em_2 + ' '+','.join(pred) + ' ' + str(tmp_json['doc'])+ ' ' + str(idx) + '\n')
+					if len(pred) > 0:
+						OUT.write(em_1 +' '+ em_2 + ' '+','.join(pred) + ' ' + str(tmp_json['doc'])+ ' ' + str(idx) + '\n')
+					#elif tmp_json['doc'] >= 235973:
+					#	tmp = tmp_json['entityMentions']
+						#print(str(cnt-235972) + '\t0.0\t'+em1[2]+'\t' + predicates+'\t' +em2[2])
+					#	print(str(tmp_json['doc']-235972) + '\t0.0\t' + tmp[0][2] + '\t' + '_'.join(tmp_json['tokens'])+'\t'+tmp[1][2])
 				else:
 					N_OUT.write(json_line)
 		with open(out1, 'w') as w1, open(out2, 'w') as w2:
@@ -280,3 +381,5 @@ if __name__ == '__main__':
 		tmp.compareLineByLine(args.in1, args.in2, args.out1)
 	elif args.op == 'generateoutput':
 		tmp.generate_output(args.in1, args.in2, args.out1)
+	elif args.op == 'combine':
+		tmp.combine(args.in1, args.in2, args.out1)
