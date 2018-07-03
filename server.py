@@ -139,11 +139,11 @@ def senddata():
 
 if __name__=='__main__':
     #app.run(debug = True, host = '0.0.0.0',port=1111)
-    # app.run(debug = True, host = 'localhost', port=5000)
+    app.run(debug = True, host = 'localhost', port=5000)
 
     #create the tmux server to preload the model
 
-    app.run(debug = True)
+    #app.run(debug = True)
     # http_server = WSGIServer(('0.0.0.0', 1111), app)
     #
     # http_server.serve_forever()
