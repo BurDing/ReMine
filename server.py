@@ -6,7 +6,6 @@ import subprocess
 import sys,os
 from subprocess import Popen, PIPE
 import os.path
-from gevent.wsgi import WSGIServer
 from flask_cors import CORS, cross_origin
 import StringIO
 import libtmux
@@ -64,6 +63,7 @@ def vi():
         temp[3] = temp[3][1:]
         data[i] = temp
     return jsonify({'tuple': data})
+
 
 #pass information to c++ web
 @app.route('/remine', methods =['POST'])

@@ -366,11 +366,3 @@ class Solver(object):
 
         lines = "\n".join(lines)
         return lines
-
-
-
-
-
-
-
-
