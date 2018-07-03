@@ -1,9 +1,7 @@
 from flask import Flask, request, render_template, jsonify, Response,json
 import requests
-from stanza.nlp.corenlp import CoreNLPClient
 import nltk
 from nltk import word_tokenize
-from neuralcoref import Coref
 import subprocess
 import sys,os
 from subprocess import Popen, PIPE
@@ -18,8 +16,6 @@ from src_py.remine_online import Solver, Model
 
 app = Flask(__name__)
 #preload model for multithread
-global coref
-coref = Coref()
 global model1
 global model2
 global model3
@@ -69,57 +65,6 @@ def vi():
         data[i] = temp
     return jsonify({'tuple': data})
 
-
-@app.route('/cof', methods =['POST'])
-@cross_origin(origin='*')
-def cof():
-    resource = request.form['origin'].split('\n')
-    data = request.form['result']
-    if data == "":
-        return jsonify({'tuple': []})
-    data = data.split('\n')
-    d = {}
-    for i in range(len(data)):
-        temp = data[i].replace('\t', '|')
-        temp = temp.split("|")
-        temp[2] = temp[2].split(",")[:-1]
-        if temp[0] not in d:
-            d[temp[0]] = [temp[1:]]
-        else:
-            d[temp[0]].append(temp[1:])
-    modi = {}
-    for key in d:
-        for tup in d[key]:
-            ob = nltk.pos_tag(word_tokenize(tup[0]))
-            for word in ob:
-                if word[1] == "PRP":
-                    txt = ""
-                    txt = resource[int(key) - 1]
-                    clusters = coref.one_shot_coref(utterances=txt)
-                    mentions = coref.get_mentions()
-                    for index in clusters[0]:
-                        if len(clusters[0][index]) >= 2:
-                            syn = [str(mentions[i]) for i in clusters[0][index]]
-                            if word[0] in syn:
-                                modi[key] = [word[0], syn]
-
-    for key in modi:
-        for i in range(len(d[key])):
-            if modi[key][0] in d[key][i][0]:
-                d[key][i][0] = modi[key][1][len(modi[key][1]) - 1]
-    res = []
-    keylist = d.keys()
-    keylist = sorted(list(map(int, keylist)))
-    for key in keylist:
-        key = str(key)
-        for tup in d[key]:
-            rela = ""
-            for word in tup[1]:
-                rela = rela + word[:-1] + " ,"
-            rela = rela + " "
-            temp = str(key) + "\t" + tup[0] + "|" + rela + "|" + tup[2]
-            res.append(temp)
-    return jsonify({'tuple': res})
 #pass information to c++ web
 @app.route('/remine', methods =['POST'])
 @cross_origin(origin='*')
