@@ -10,6 +10,7 @@ from flask_cors import CORS, cross_origin
 import StringIO
 import libtmux
 import json
+import spacy
 from src_py.remine_online import Solver, Model
 
 
@@ -24,7 +25,7 @@ model1 = Model('tmp_remine/token_mapping.p')
 global model_dict
 model_dict = {}
 
-model_dict["s1"] = (model1, 'http://dmserv4.cs.illinois.edu:10086/pass_result')
+model_dict["m1"] = (model1, 'http://localhost:10086/pass_result')
 # model_dict["s2"] = (model2, 'http://dmserv4.cs.illinois.edu:10087/pass_result')
 # model_dict["s3"] = (model3, 'http://dmserv4.cs.illinois.edu:10088/pass_result')
 
@@ -47,61 +48,40 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 def render():
     return render_template('example.html')
 
-#todo generate an api to set model.
-
-@app.route('/vi', methods =['POST'])
-@cross_origin(origin='*')
-def vi():
-    data = request.form['result'].split('\n')
-    data.pop()
-    for i in range(len(data)):
-        temp = data[i].replace('\t', '|')
-        temp = temp.split("|")
-        temp[2] = temp[2].split(",")[:-1]
-        for j in range(len(temp[2])):
-            temp[2][j] = temp[2][j][1:-1]
-        temp[3] = temp[3][1:]
-        data[i] = temp
-    return jsonify({'tuple': data})
-
 
 #pass information to c++ web
 @app.route('/remine', methods =['POST'])
 @cross_origin(origin='*')
 def senddata():
-    NLP_client = CoreNLPClient(server='http://dmserv4.cs.illinois.edu:9000',
-                               default_annotators=['depparse', 'lemma', 'pos'])
+    nlp = spacy.load('en_core_web_sm')
     #get input from front end
-    data = request.data
-    json_data = json.loads(data)
-    raw = json_data["text"]
-    model_choice = json_data["model"]
+    raw = request.form['text']
+    model_choice = request.form['model']
     dep_text = StringIO.StringIO()
     token_text = StringIO.StringIO()
     pos_text = StringIO.StringIO()
     #send data to Stanford NLP java server
-    annotated = NLP_client.annotate(raw)
-
-    for sentence in annotated.sentences:
-        edges = sentence.depparse().to_json()
-        dep_list = [''] * (len(edges)+1)
-        for edge in edges:
-            if edge['dep'] == "root":
-                dep_list[edge['dependent']] = "0_root"
+    doc = nlp(raw)
+    
+    for sent in doc.sents:
+        token_len = len(sent)
+        count = 0
+        for token in sent:
+            dep = ""
+            if token.dep_ == "ROOT":
+                dep = "0_root"
             else:
-                dep_list[edge['dependent']] = "{}_{}".format(edge['governer'], edge['dep'])
-        dep_text.write(' '.join(dep_list[1:]) + '\n')
-        token_len = len(sentence)
-        cout = 0
-        for token in sentence:
-
-            if cout == token_len -1 :
-                token_text.write(token.lemma + '\n')
-                pos_text.write(token.pos + '\n')
+                dep = "{}_{}".format(token.head.i, token.dep_)
+            if count == token_len -1 :
+                token_text.write(token.lemma_ + '\n')
+                pos_text.write(token.tag_ + '\n')
+                dep_text.write(dep + '\n')
             else:
-                token_text.write(token.lemma + ' ')
-                pos_text.write(token.pos + ' ')
-            cout += 1
+                token_text.write(token.lemma_ + ' ')
+                pos_text.write(token.tag_ + ' ')
+                dep_text.write(dep + ' ')
+            count += 1
+
 
     dep_text = dep_text.getvalue().rstrip()
     token_text = token_text.getvalue().rstrip()

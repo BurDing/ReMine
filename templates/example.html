@@ -2,53 +2,76 @@
 <html lang="en">
 
     <head>
-        <title>Remine Demo</title>
+        <title>AutoNet</title>
         <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
         <link rel = "stylesheet" type = "text/css" href = "{{ url_for('static', filename='style.css') }}"/>
         <script src="{{ url_for('static', filename='func.js') }}"></script>
         <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
-        <link href="https://fonts.googleapis.com/css?family=Gaegu|Varela+Round|Open+Sans|Poiret+One" rel="stylesheet">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/uiuc.ico') }}" type="image/x-icon">
     </head>
 
     <body>
-
-        <div class = "title">
-            <a id = "b1" class = "buttons">Remine</a>
-            <a id = "b2" class = "buttons">Remine & Coreference</a>
-            <a id = "b3" class = "buttons"></a>
-            <a id = "home" class = "remine">Remine_OTF</a>
-        </div>
-
-        <div id = "input" class = "input">
-            <div class = "intro">
-                <p id = "intro_title" class = "intro_title"></p>
-                <p class = "intro_para">This is a demo of novel open IE system—ReMine. It integrates local context signal and global structural signal in a unified framework with distant supervision. The input is corpus. The outputs will return relation tuples. Experiments on two real-world corpora of different domains demonstrate that ReMine system achieves superior precision when outputting same number of extractions, compared with several state-of-the-art open IE systems.</p>
-            </div>
-
-            <div class = "selector">
-                <a class = "selectText">Pick a model here!</a>
-                <select id = "selection" class = "select">
-                    <option value = "s1">New York Time</option>
-                    <option value = "s2">Wikipedia</option>
-                    <option value = "s3">Biological Paper</option>
-                </select>
-            </div>
-
-            <div class = "textInput">
-                <textarea id = "inText" type = "text" name = "corpus" class = "textFrame"></textarea>
-                <a class = "button" onclick="submitCorpus()">Run the Model</a>
+        <div class="title">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" class="titleImg"/>
+            <div class="titleName">
+                AutoNet System
+                <img id="helpIcon"
+                    src="{{ url_for('static', filename='img/question-mark.png') }}"
+                    title="Click for help"
+                    onClick="toggleInfo()"/>
             </div>
         </div>
 
-        <div id = "output" class = "output">
-            <div id = "outText" class = "outText">
-                <div id = "loader" class="loader">
-                    <div id="largeBox"></div>
-                    <div id="smallBox"></div>
-                </div>
-                <img id = "outputImg" src="https://cdn2.iconfinder.com/data/icons/screens-part-2/68/time_waiting_tv_screen_media_computer-512.png">
-            </div>
+        <div id="help" class="info">
+            <img src="{{ url_for('static', filename='img/close.png') }}"
+                id="closeIcon"
+                onClick="closeInfo()"/>
+
+            <p>
+                The AutoNet system can turn domain-specific corpora in structured networks without additional expert effort.
+                This interface is for the <b>online discovery and exploration</b>.
+            </p>
+
+            <p>
+                <b>1. Construction on the Fly:</b>
+                Put the URL to your corpus and click the <em>upload</em> button.
+                The constructed network will be visualized on the left panel.
+            </p>
+            <p>
+                <b>2. Keyword Exploration:</b>
+                Type your keywords and click the <em>search</em> button.
+                The retrieved network will be visualized on the left panel.
+            </p>
+            <p>
+                <b>General Tips</b>
+                <ul>
+                    <li>Click the <em>expand</em> button will retrieve 32 more related nodes if there are</li>
+                    <li>Hover over a node or an edge to see the entity names, and to highlight
+                    related entities.</li>
+                    <li>Click on a node or an edge to show entity details. It will open up a
+                    side panel.</li>
+                    <li>On the details panel, you can click on the <em>target</em>
+                    icon to center the graph on that movie. And clicking on the link to
+                    a related entity will move to that entity (in the graph and in the
+                    panel)</li>
+                    <li>You can use you usual browser controls to zoom and pan
+                    over the graph. If you zoom in when centred on a entity, the
+                    graph will expand around it.</li>
+                    <li>Above a certain zoom level, entity names are automatically
+                    displayed for all the nodes.</li>
+                </ul>
+            </p>
         </div>
+
+        <form class="sub">
+            <div class="form-group">
+                <input class="form-control" id="input" placeholder="Keyword1;Keyword2 or URL">
+            </div>
+            <a type="submit" class="btn btn-default">Search</a>
+            <a type="submit" class="btn btn-default" onclick="Upload()">Upload</a>
+            <a type="submit" class="btn btn-default">Expand</a>
+        </form>
 
     </body>
 
