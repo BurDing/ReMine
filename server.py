@@ -62,7 +62,7 @@ def senddata():
     pos_text = StringIO.StringIO()
     #send data to Stanford NLP java server
     doc = nlp(raw)
-    
+
     for sent in doc.sents:
         token_len = len(sent)
         count = 0
@@ -119,7 +119,7 @@ def senddata():
 
 if __name__=='__main__':
     #app.run(debug = True, host = '0.0.0.0',port=1111)
-    app.run(debug = True, host = 'localhost', port=5000)
+    app.run(debug = True, host = 'localhost', port=8000)
 
     #create the tmux server to preload the model
 
