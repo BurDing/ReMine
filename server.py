@@ -119,7 +119,7 @@ def senddata():
 
 if __name__=='__main__':
     #app.run(debug = True, host = '0.0.0.0',port=1111)
-    app.run(debug = True, host = 'localhost', port=8000)
+    app.run(debug = True, host = '0.0.0.0', port=8000)
 
     #create the tmux server to preload the model
 
