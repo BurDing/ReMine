@@ -243,9 +243,9 @@ function D3ok() {
   // *************************************************************************
   var colors = d3.scale.category20();
   d3.json(
-    // 'data/movie-network-25-7-3.json',
-    // 'data/mock_network_expanded_2.json',
-    'data/mock_network_explored.json',
+    // 'mock/movie-network-25-7-3.json',
+    // 'mock/mock_network_expanded_2.json',
+    'mock/mock_network_explored.json',
     function(data) {
 
     // Declare the variables pointing to the node & link arrays
